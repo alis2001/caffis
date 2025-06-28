@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./server
+    container_name: caffis-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+      - ./prisma:/prisma
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  frontend:
+    build: ./client
+    container_name: caffis-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+    env_file:
+      - .env
+
+  db:
+    image: postgres:15
+    container_name: caffis-db
+    restart: always
+    environment:
+      POSTGRES_USER: caffis_user
+      POSTGRES_PASSWORD: admin5026
+      POSTGRES_DB: caffis_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
