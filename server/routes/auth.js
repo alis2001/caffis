@@ -122,29 +122,6 @@ router.get('/me', authMiddleware, async (req, res) => {
 });
 
 
-// Get invites where current user is the host
-router.get('/my', authMiddleware, async (req, res) => {
-  try {
-    const invites = await prisma.invite.findMany({
-      where: { hostId: req.user.id },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        requests: {
-          select: {
-            id: true,
-            status: true,
-            user: { select: { id: true, username: true, firstName: true, lastName: true } }
-          }
-        }
-      }
-    });
-
-    res.json(invites);
-  } catch (err) {
-    console.error('Fetch My Invites Error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 
 module.exports = router;

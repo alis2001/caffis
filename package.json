@@ -3,6 +3,8 @@
     "prisma": "^6.10.1"
   },
   "dependencies": {
-    "@prisma/client": "^6.10.1"
+    "@prisma/client": "^6.10.1",
+    "framer-motion": "^12.20.1",
+    "lucide-react": "^0.525.0"
   }
 }
