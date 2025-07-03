@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Caffis",
-  description: "Spontaneous coffee meetups. One tap away."
+  description: "Spontaneous coffee meetups, one tap away."
 };
 
 export default function RootLayout({
@@ -31,8 +31,6 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap"
           rel="stylesheet"
         />
-
-        {/* ✅ Favicon */}
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/favicon.png" />
         <meta name="theme-color" content="#FDF8F3" />
@@ -40,10 +38,7 @@ export default function RootLayout({
       <body
         className={`bg-brand-cream text-gray-900 antialiased font-sans ${geistSans.variable} ${geistMono.variable}`}
       >
-        {/* ✅ Only the Navbar globally */}
         <Navbar />
-
-        {/* Page content rendered below */}
         <main className="relative">{children}</main>
       </body>
     </html>

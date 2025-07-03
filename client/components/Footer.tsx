@@ -7,22 +7,26 @@ import { motion } from "framer-motion";
 export default function Footer() {
   return (
     <motion.footer
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      viewport={{ once: true }}
-      className="min-h-full flex flex-col justify-center bg-[#FDF8F3] text-gray-700 pt-20 pb-20 border-t border-gray-200 relative"
-      style={{
-        backgroundImage: "url('/backFooter.png')",
-        backgroundSize: "cover",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-        backgroundBlendMode: "overlay",
-        opacity: 0.98,
-      }}
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        viewport={{ once: true }}
+        className="relative h-full w-full flex flex-col justify-center bg-[#FDF8F3] text-gray-700 pt-20 pb-20 border-t border-gray-200 overflow-hidden"
     >
-      <div className="absolute inset-0 bg-white/80 z-0" />
 
+      {/* ✅ Background Image that fully covers footer */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="/Footerbackground.png"
+          alt="Footer background"
+          fill
+          priority
+          className="object-cover w-full h-full"
+        />
+        <div className="absolute inset-0 bg-white/40" />
+      </div>
+
+      {/* ✅ Foreground Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
         {/* Branding */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
@@ -87,7 +91,6 @@ export default function Footer() {
             </a>
           </div>
 
-          {/* CTA */}
           <a
             href="/register"
             className="mt-4 inline-block bg-[#6BBF59] text-white px-5 py-2 rounded-full text-sm font-medium shadow-md hover:scale-105 transition"

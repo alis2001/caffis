@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ImageCarousel from "@/components/ImageCarousel";
+
+const registerImages = ["/register1.jpg", "/register2.jpg", "/register3.jpg"];
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -67,7 +70,7 @@ export default function RegisterPage() {
       }
 
       router.push("/login");
-    } catch (err: any) {
+    } catch {
       setGeneralError("Errore di rete. Riprova.");
     } finally {
       setLoading(false);
@@ -75,41 +78,47 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDF8F3] px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-lg bg-white p-10 rounded-xl shadow-xl space-y-6"
-      >
-        <h2 className="text-3xl font-bold text-center text-brand-coral">Crea il tuo account</h2>
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#FDF8F3]">
+      {/* Image Gallery */}
+      <div className="w-full md:w-1/2 h-64 md:h-auto">
+        <ImageCarousel images={registerImages} />
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <input
-              type="text"
-              name="firstName"
-              placeholder="Nome"
-              value={form.firstName}
-              onChange={handleChange}
-              required
-              className="px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green w-full"
-            />
-            {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
-          </div>
-          <div>
-            <input
-              type="text"
-              name="lastName"
-              placeholder="Cognome"
-              value={form.lastName}
-              onChange={handleChange}
-              required
-              className="px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green w-full"
-            />
-            {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
-          </div>
-        </div>
+      {/* Form */}
+      <div className="w-full md:w-1/2 flex items-center justify-center px-4 py-12">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-lg bg-white p-10 rounded-xl shadow-xl space-y-6"
+        >
+          <h2 className="text-3xl font-bold text-center text-brand-coral">Crea il tuo account</h2>
 
-        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <input
+                type="text"
+                name="firstName"
+                placeholder="Nome"
+                value={form.firstName}
+                onChange={handleChange}
+                required
+                className="px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green w-full"
+              />
+              {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
+            </div>
+            <div>
+              <input
+                type="text"
+                name="lastName"
+                placeholder="Cognome"
+                value={form.lastName}
+                onChange={handleChange}
+                required
+                className="px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green w-full"
+              />
+              {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
+            </div>
+          </div>
+
           <input
             type="text"
             name="username"
@@ -120,9 +129,7 @@ export default function RegisterPage() {
             className="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green"
           />
           {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
-        </div>
 
-        <div>
           <input
             type="email"
             name="email"
@@ -133,9 +140,7 @@ export default function RegisterPage() {
             className="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green"
           />
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-        </div>
 
-        <div>
           <input
             type="password"
             name="password"
@@ -146,9 +151,7 @@ export default function RegisterPage() {
             className="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green"
           />
           {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-        </div>
 
-        <div>
           <input
             type="password"
             name="confirmPassword"
@@ -159,25 +162,25 @@ export default function RegisterPage() {
             className="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green"
           />
           {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
-        </div>
 
-        {generalError && <p className="text-red-500 text-sm text-center">{generalError}</p>}
+          {generalError && <p className="text-red-500 text-sm text-center">{generalError}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-[#6BBF59] text-white py-3 rounded-md font-semibold hover:bg-[#5aad4e] transition"
-        >
-          {loading ? "Registrazione in corso..." : "Registrati"}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#6BBF59] text-white py-3 rounded-md font-semibold hover:bg-[#5aad4e] transition"
+          >
+            {loading ? "Registrazione in corso..." : "Registrati"}
+          </button>
 
-        <p className="text-sm text-center text-gray-500">
-          Hai già un account?{" "}
-          <a href="/login" className="text-brand-coral hover:underline">
-            Accedi
-          </a>
-        </p>
-      </form>
+          <p className="text-sm text-center text-gray-500">
+            Hai già un account?{" "}
+            <a href="/login" className="text-brand-coral hover:underline">
+              Accedi
+            </a>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }
