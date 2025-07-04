@@ -5,14 +5,30 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Calendar, User, Settings, 
+  LogOut, Shield, Menu, X, Grid3X3, Plus
+} from "lucide-react";
+import CaffisLogo from "@/components/CaffisLogo";
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout, isLoading } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isLightPage = pathname === "/register" || pathname === "/login";
+
+  // Handle scroll effect for glassmorphism
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -38,259 +54,463 @@ export default function Navbar() {
     return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   };
 
-  // Guest navigation (not logged in)
+  // Guest navigation (not logged in) with Apple design
   const GuestNavigation = () => (
-    <div className="flex space-x-6 font-semibold text-sm">
-      <Link
-        href="/"
-        className={`relative group transition duration-300 hover:opacity-80 ${
-          pathname === "/" ? "border-b-2 border-current" : ""
-        }`}
-      >
-        <span className="group-hover:underline group-hover:underline-offset-4">
-          Home
-        </span>
+    <div className="flex space-x-3">
+      <Link href="/">
+        <motion.div
+          className={`px-6 py-3 rounded-2xl font-semibold text-sm transition-all relative overflow-hidden ${
+            pathname === "/"
+              ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+              : "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-current"
+          }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {/* Liquid Glass Effect for Active State */}
+          {pathname === "/" && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10"
+              animate={{
+                x: ["-100%", "100%"],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              style={{ width: "50%" }}
+            />
+          )}
+          <span className="relative z-10">Home</span>
+        </motion.div>
       </Link>
-      <Link
-        href="/register"
-        className={`relative group transition duration-300 hover:opacity-80 ${
-          pathname === "/register" ? "border-b-2 border-current" : ""
-        }`}
-      >
-        <span className="group-hover:underline group-hover:underline-offset-4">
-          Registrati
-        </span>
+      
+      <Link href="/register">
+        <motion.div
+          className={`px-6 py-3 rounded-2xl font-semibold text-sm transition-all relative overflow-hidden ${
+            pathname === "/register"
+              ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+              : "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-current"
+          }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {/* Liquid Glass Effect for Active State */}
+          {pathname === "/register" && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10"
+              animate={{
+                x: ["-100%", "100%"],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              style={{ width: "50%" }}
+            />
+          )}
+          <span className="relative z-10">Registrati</span>
+        </motion.div>
       </Link>
-      <Link
-        href="/login"
-        className={`relative group transition duration-300 hover:opacity-80 ${
-          pathname === "/login" ? "border-b-2 border-current" : ""
-        }`}
-      >
-        <span className="group-hover:underline group-hover:underline-offset-4">
-          Accedi
-        </span>
+      
+      <Link href="/login">
+        <motion.div
+          className={`px-6 py-3 rounded-2xl font-semibold text-sm transition-all relative overflow-hidden ${
+            pathname === "/login"
+              ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+              : "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-current"
+          }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {/* Liquid Glass Effect for Active State */}
+          {pathname === "/login" && (
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10"
+              animate={{
+                x: ["-100%", "100%"],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              style={{ width: "50%" }}
+            />
+          )}
+          <span className="relative z-10">Accedi</span>
+        </motion.div>
       </Link>
     </div>
   );
 
-  // Authenticated navigation (logged in)
+  // Authenticated navigation (logged in) with Apple design
   const AuthenticatedNavigation = () => (
-    <div className="flex items-center space-x-6">
+    <div className="flex items-center space-x-4">
       {/* Navigation Links */}
-      <div className="hidden md:flex space-x-6 font-semibold text-sm">
-        <Link
-          href="/dashboard"
-          className={`relative group transition duration-300 hover:opacity-80 ${
-            pathname === "/dashboard" ? "border-b-2 border-current" : ""
-          }`}
-        >
-          <span className="group-hover:underline group-hover:underline-offset-4">
-            Dashboard
-          </span>
+      <div className="hidden md:flex space-x-3">
+        <Link href="/dashboard">
+          <motion.div
+            className={`px-6 py-3 rounded-2xl font-semibold text-sm transition-all relative overflow-hidden ${
+              pathname === "/dashboard"
+                ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg"
+                : "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-current"
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {/* Liquid Glass Effect for Active State */}
+            {pathname === "/dashboard" && (
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10"
+                animate={{
+                  x: ["-100%", "100%"],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                style={{ width: "50%" }}
+              />
+            )}
+            <div className="relative z-10 flex items-center gap-2">
+              <Grid3X3 size={16} />
+              <span>Dashboard</span>
+            </div>
+          </motion.div>
         </Link>
-        <Link
-          href="/invites"
-          className={`relative group transition duration-300 hover:opacity-80 ${
-            pathname === "/invites" ? "border-b-2 border-current" : ""
-          }`}
-        >
-          <span className="group-hover:underline group-hover:underline-offset-4">
-            Eventi
-          </span>
+        
+        <Link href="/invites">
+          <motion.div
+            className={`px-6 py-3 rounded-2xl font-semibold text-sm transition-all relative overflow-hidden ${
+              pathname === "/invites"
+                ? "bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg"
+                : "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-current"
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {/* Liquid Glass Effect for Active State */}
+            {pathname === "/invites" && (
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10"
+                animate={{
+                  x: ["-100%", "100%"],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                style={{ width: "50%" }}
+              />
+            )}
+            <div className="relative z-10 flex items-center gap-2">
+              <Calendar size={16} />
+              <span>Eventi</span>
+            </div>
+          </motion.div>
         </Link>
-        <Link
-          href="/create-invite"
-          className={`relative group transition duration-300 hover:opacity-80 ${
-            pathname === "/create-invite" ? "border-b-2 border-current" : ""
-          }`}
-        >
-          <span className="group-hover:underline group-hover:underline-offset-4">
-            Crea Evento
-          </span>
+        
+        <Link href="/create-invite">
+          <motion.div
+            className={`px-6 py-3 rounded-2xl font-semibold text-sm transition-all relative overflow-hidden ${
+              pathname === "/create-invite"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                : "bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-current"
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {/* Liquid Glass Effect for Active State */}
+            {pathname === "/create-invite" && (
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10"
+                animate={{
+                  x: ["-100%", "100%"],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                style={{ width: "50%" }}
+              />
+            )}
+            <div className="relative z-10 flex items-center gap-2">
+              <Plus size={16} />
+              <span>Crea Evento</span>
+            </div>
+          </motion.div>
         </Link>
       </div>
 
       {/* User Menu */}
       <div className="relative" ref={menuRef}>
-        <button
+        <motion.button
           onClick={() => setShowUserMenu(!showUserMenu)}
-          className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-2 hover:bg-white/20 transition duration-200"
+          className="flex items-center space-x-3 bg-white/10 backdrop-blur-md rounded-2xl px-3 py-2 hover:bg-white/20 transition-all shadow-lg border border-white/20"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
           {/* User Avatar */}
-          <div className="w-8 h-8 bg-[#6BBF59] rounded-full flex items-center justify-center text-white text-sm font-bold">
+          <motion.div 
+            className="relative w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-white text-sm font-bold overflow-hidden"
+            whileHover={{ rotate: 5 }}
+          >
             {user?.profilePic ? (
               <Image
                 src={user.profilePic}
                 alt="Profile"
                 width={32}
                 height={32}
-                className="rounded-full"
+                className="rounded-xl object-cover"
               />
             ) : (
               getUserInitials()
             )}
-          </div>
+            
+            {/* Online Status */}
+            <motion.div
+              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </motion.div>
           
-          {/* User Name (hidden on mobile) */}
+          {/* User Name */}
           <span className="hidden sm:block font-medium text-sm">
             {user?.firstName}
           </span>
           
           {/* Dropdown Arrow */}
-          <svg
-            className={`w-4 h-4 transition-transform duration-200 ${
-              showUserMenu ? "rotate-180" : ""
-            }`}
+          <motion.svg
+            className="w-4 h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            animate={{ rotate: showUserMenu ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+          </motion.svg>
+        </motion.button>
 
-        {/* Dropdown Menu */}
-        {showUserMenu && (
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-            {/* User Info */}
-            <div className="px-4 py-3 border-b border-gray-100">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-[#6BBF59] rounded-full flex items-center justify-center text-white font-bold">
-                  {user?.profilePic ? (
-                    <Image
-                      src={user.profilePic}
-                      alt="Profile"
-                      width={40}
-                      height={40}
-                      className="rounded-full"
-                    />
-                  ) : (
-                    getUserInitials()
-                  )}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {user?.firstName} {user?.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">@{user?.username}</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    {user?.isEmailVerified && (
-                      <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">
-                        ✓ Email
-                      </span>
+        {/* Dropdown Menu with Apple Design */}
+        <AnimatePresence>
+          {showUserMenu && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="absolute right-0 mt-3 w-72 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden z-50"
+            >
+              {/* User Info Header */}
+              <div className="px-4 py-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-b border-gray-100/50">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg">
+                    {user?.profilePic ? (
+                      <Image
+                        src={user.profilePic}
+                        alt="Profile"
+                        width={48}
+                        height={48}
+                        className="rounded-2xl object-cover"
+                      />
+                    ) : (
+                      getUserInitials()
                     )}
-                    {user?.isPhoneVerified && (
-                      <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">
-                        ✓ Telefono
-                      </span>
-                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                    <p className="text-sm text-gray-600">@{user?.username}</p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {user?.isEmailVerified && (
+                        <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Shield size={10} />
+                          Email
+                        </span>
+                      )}
+                      {user?.isPhoneVerified && (
+                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                          📱 Telefono
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Menu Items */}
-            <div className="py-2">
-              {/* Mobile Navigation Links */}
-              <div className="md:hidden border-b border-gray-100 pb-2 mb-2">
+              {/* Menu Items */}
+              <div className="py-2">
+                {/* Mobile Navigation Links */}
+                <div className="md:hidden border-b border-gray-100/50 pb-2 mb-2">
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-white/50 transition-colors"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <Grid3X3 className="w-4 h-4 mr-3 text-blue-500" />
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/invites"
+                    className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-white/50 transition-colors"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <Calendar className="w-4 h-4 mr-3 text-pink-500" />
+                    Eventi
+                  </Link>
+                  <Link
+                    href="/create-invite"
+                    className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-white/50 transition-colors"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <Plus className="w-4 h-4 mr-3 text-purple-500" />
+                    Crea Evento
+                  </Link>
+                </div>
+
+                {/* Profile & Settings */}
                 <Link
-                  href="/dashboard"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  href="/profile"
+                  className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-white/50 transition-colors"
                   onClick={() => setShowUserMenu(false)}
                 >
-                  <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                  </svg>
-                  Dashboard
+                  <User className="w-4 h-4 mr-3 text-blue-500" />
+                  Profilo
                 </Link>
+                
                 <Link
-                  href="/invites"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  href="/settings"
+                  className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-white/50 transition-colors"
                   onClick={() => setShowUserMenu(false)}
                 >
-                  <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Eventi
+                  <Settings className="w-4 h-4 mr-3 text-gray-500" />
+                  Impostazioni
                 </Link>
-                <Link
-                  href="/create-invite"
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  onClick={() => setShowUserMenu(false)}
-                >
-                  <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Crea Evento
-                </Link>
+
+                {/* Logout */}
+                <div className="border-t border-gray-100/50 mt-2 pt-2">
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50/50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 mr-3" />
+                    Esci
+                  </button>
+                </div>
               </div>
-
-              {/* Profile & Settings */}
-              <Link
-                href="/profile"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowUserMenu(false)}
-              >
-                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Profilo
-              </Link>
-              
-              <Link
-                href="/settings"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowUserMenu(false)}
-              >
-                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Impostazioni
-              </Link>
-
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-              >
-                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Esci
-              </button>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between backdrop-blur-md ${
-      isLightPage ? "bg-white/70 text-gray-800" : "bg-black/20 text-white"
-    } transition-colors duration-300`}>
-      {/* Left: Logo */}
-      <Link href={isAuthenticated ? "/dashboard" : "/"}>
-        <Image
-          src="/favicon.png"
-          alt="Caffis logo"
-          width={60}
-          height={60}
-          className="rounded-md hover:scale-105 transition-transform duration-200"
-        />
-      </Link>
+    <motion.nav
+      className={`fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between transition-all duration-500 ${
+        isLightPage 
+          ? scrolled 
+            ? "bg-white/60 backdrop-blur-xl border-b border-gray-200/30 shadow-lg text-gray-800" 
+            : "bg-white/50 backdrop-blur-md text-gray-800"
+          : scrolled 
+            ? "bg-black/10 backdrop-blur-xl border-b border-white/10 shadow-2xl text-white" 
+            : "bg-black/5 backdrop-blur-md text-white"
+      }`}
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      {/* Animated Background Gradient */}
+      <motion.div
+        className="absolute inset-0 opacity-30"
+        style={{
+          background: scrolled 
+            ? "linear-gradient(90deg, rgba(102,126,234,0.08) 0%, rgba(240,147,251,0.08) 50%, rgba(75,172,254,0.08) 100%)"
+            : "linear-gradient(90deg, rgba(102,126,234,0.04) 0%, rgba(240,147,251,0.04) 50%, rgba(75,172,254,0.04) 100%)"
+        }}
+        animate={{
+          backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      />
 
-      {/* Right: Navigation */}
-      {isLoading ? (
-        // Loading state
-        <div className="w-8 h-8 animate-pulse bg-white/20 rounded-full"></div>
-      ) : isAuthenticated ? (
-        <AuthenticatedNavigation />
-      ) : (
-        <GuestNavigation />
-      )}
-    </nav>
+      <div className="relative z-10 w-full flex items-center justify-between">
+        {/* Left: Logo with Text */}
+        <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-3">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            {/* Logo with Custom Caffis Design */}
+            <motion.div
+              className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg"
+              whileHover={{ rotate: 360 }}
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+            >
+              <CaffisLogo className="w-6 h-6" />
+              
+              {/* Pulsing Glow Effect */}
+              <motion.div
+                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/50 to-pink-500/50 blur-lg"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.5, 0.8, 0.5]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            </motion.div>
+            
+            {/* Brand Text with Gradient */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h1 className="text-2xl font-bold">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                  Caffis
+                </span>
+              </h1>
+              <p className="text-xs text-gray-600">
+                Connetti con un caffè
+              </p>
+            </motion.div>
+          </motion.div>
+        </Link>
+
+        {/* Right: Navigation */}
+        {isLoading ? (
+          // Loading state with Apple design
+          <motion.div 
+            className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          >
+            <CaffisLogo className="w-5 h-5" />
+          </motion.div>
+        ) : isAuthenticated ? (
+          <AuthenticatedNavigation />
+        ) : (
+          <GuestNavigation />
+        )}
+      </div>
+    </motion.nav>
   );
 }
