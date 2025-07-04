@@ -17,21 +17,23 @@ export default function LandingSections() {
       navigationTooltips={["Home", "Features", "Contact"]}
       render={() => (
         <ReactFullpage.Wrapper>
-          {/* Hero Section */}
+          {/* Hero Section - Full height */}
           <div className="section h-screen w-screen p-0 m-0 relative">
             <HeroSlider />
           </div>
 
-          {/* Features Section */}
+          {/* Features Section - Full height */}
           <div className="section h-screen w-screen bg-apple-mesh flex items-center justify-center p-0 m-0">
             <div className="w-full h-full flex items-center justify-center">
               <SplitCardsSection />
             </div>
           </div>
 
-          {/* Footer Section */}
-          <div className="section fp-auto-height bg-apple-mesh min-h-screen">
-            <Footer />
+          {/* Footer Section - Half height, same background */}
+          <div className="section bg-apple-mesh" style={{ height: '50vh' }}>
+            <div className="w-full h-full flex items-center justify-center">
+              <Footer />
+            </div>
           </div>
 
         </ReactFullpage.Wrapper>

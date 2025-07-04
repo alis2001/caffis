@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useRequireAuth } from "@/contexts/AuthContext";
 import { smartMatchUserInput, getSmartConfirmation, getCategoryDisplayText } from "@/utils/preferenceCategories";
-import { Mic, MicOff, Send } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mic, MicOff, Send, Sparkles, Coffee, MessageCircle, VolumeX, Volume2, ArrowRight, Shield } from "lucide-react";
 
 interface Message {
   id: string;
@@ -119,8 +120,6 @@ export default function VoiceOnboardingPage() {
   const initializeRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Remove text-to-speech state - bot doesn't speak
 
   // Initialize speech recognition
   useEffect(() => {
@@ -293,7 +292,6 @@ export default function VoiceOnboardingPage() {
       timestamp: new Date()
     };
     setMessages(prev => [...prev, newMessage]);
-    // Bot messages remain text-only, no speech
   };
 
   const addBotMessageWithTyping = async (content: string, delay: number = 2000) => {
@@ -414,10 +412,10 @@ export default function VoiceOnboardingPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto"></div>
-          <p className="mt-4 text-amber-800">Caricamento...</p>
+      <div className="min-h-screen bg-apple-mesh flex items-center justify-center">
+        <div className="card-apple text-center py-12 px-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-orange-800">Caricamento...</p>
         </div>
       </div>
     );
@@ -433,201 +431,450 @@ export default function VoiceOnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 pt-20">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-apple-mesh pt-20">
+      {/* Floating Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-gradient-to-r from-orange-400/10 to-yellow-400/10 backdrop-blur-sm"
+            style={{
+              width: `${80 + i * 15}px`,
+              height: `${80 + i * 15}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [-15, 15, -15],
+              x: [-8, 8, -8],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{
+              duration: 3 + i,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
           <div className="flex items-center justify-center gap-4 mb-4">
-            <h1 className="text-3xl font-bold text-amber-900">
-              ☕ Benvenuto in Caffis!
+            <motion.div
+              className="w-16 h-16 rounded-3xl bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center"
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Coffee className="w-8 h-8 text-white" />
+            </motion.div>
+            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-yellow-600">
+              Benvenuto in Caffis!
             </h1>
           </div>
           
-          <p className="text-amber-700">
+          <p className="text-gray-600 mb-6">
             Conosciamoci meglio per trovarti i compagni di caffè perfetti
           </p>
           
-          {/* Progress bar */}
-          <div className="mt-4 w-full bg-amber-200 rounded-full h-2">
-            <div 
-              className="bg-amber-600 h-2 rounded-full transition-all duration-500"
+          {/* Progress bar - Liquid Glass Style */}
+          <div className="relative w-full bg-white/20 backdrop-blur-md rounded-full h-3 border border-white/30 shadow-lg overflow-hidden">
+            <motion.div 
+              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 shadow-lg"
               style={{ width: `${getProgressPercentage()}%` }}
-            ></div>
+              initial={{ width: 0 }}
+              animate={{ width: `${getProgressPercentage()}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            >
+              {/* Shimmer Effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                animate={{
+                  x: ["-100%", "100%"],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                style={{ width: "50%" }}
+              />
+            </motion.div>
           </div>
-          <p className="text-amber-600 mt-2">
+          <p className="text-orange-600 mt-3 font-medium">
             {chatPhase === 'questions' && currentQuestionIndex >= 0 
               ? `Domanda ${currentQuestionIndex + 1}/${QUESTIONS.length}` 
               : chatPhase === 'complete' 
                 ? 'Completato! 🎉'
                 : 'Inizializzazione...'}
           </p>
-        </div>
+        </motion.div>
 
-        {/* Chat Container */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+        {/* Chat Container - Liquid Glass Style */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="card-apple bg-white/10 backdrop-blur-xl border-white/20 overflow-hidden"
+        >
           {/* Messages Area */}
-          <div className="h-96 overflow-y-auto p-6 space-y-4">
+          <div className="h-96 overflow-y-auto p-6 space-y-4 scrollbar-hide">
             {messages.map((message) => (
-              <div
+              <motion.div
                 key={message.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`flex items-end space-x-2 max-w-xs ${
+                <div className={`flex items-end space-x-3 max-w-xs ${
                   message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
                 }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    message.sender === 'bot' 
-                      ? 'bg-amber-600 text-white' 
-                      : 'bg-green-600 text-white'
-                  }`}>
+                  {/* Avatar */}
+                  <motion.div 
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg ${
+                      message.sender === 'bot' 
+                        ? 'bg-gradient-to-br from-orange-500 to-yellow-500' 
+                        : 'bg-gradient-to-br from-blue-500 to-purple-500'
+                    }`}
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     {message.sender === 'bot' ? '☕' : user?.firstName?.[0] || 'U'}
-                  </div>
+                  </motion.div>
                   
-                  <div className={`px-4 py-2 rounded-2xl ${
-                    message.sender === 'user'
-                      ? 'bg-green-600 text-white rounded-br-md'
-                      : 'bg-gray-100 text-gray-800 rounded-bl-md'
-                  }`}>
+                  {/* Message Bubble */}
+                  <motion.div 
+                    className={`px-4 py-3 rounded-2xl backdrop-blur-md border shadow-lg ${
+                      message.sender === 'user'
+                        ? 'bg-gradient-to-br from-blue-500/80 to-purple-500/80 text-white border-blue-300/30 rounded-br-md'
+                        : 'bg-white/80 text-gray-800 border-white/40 rounded-bl-md'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             ))}
 
             {/* Real-time transcription bubble */}
-            {(interimTranscript || isListening) && (
-              <div className="flex justify-end">
-                <div className="flex items-end space-x-2 flex-row-reverse space-x-reverse max-w-xs">
-                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
-                    🎤
-                  </div>
-                  <div className="px-4 py-2 rounded-2xl bg-blue-100 text-blue-800 rounded-br-md border-2 border-blue-300">
-                    <p className="text-sm leading-relaxed">
-                      {interimTranscript || (isListening ? "🎤 Sto ascoltando..." : "")}
-                    </p>
-                    {confidence > 0 && (
-                      <p className="text-xs text-blue-600 mt-1">
-                        Confidenza: {Math.round(confidence * 100)}%
+            <AnimatePresence>
+              {(interimTranscript || isListening) && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex justify-end"
+                >
+                  <div className="flex items-end space-x-3 flex-row-reverse space-x-reverse max-w-xs">
+                    <motion.div 
+                      className="w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center text-white shadow-lg"
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      🎤
+                    </motion.div>
+                    <div className="px-4 py-3 rounded-2xl bg-gradient-to-br from-green-500/20 to-cyan-500/20 backdrop-blur-md text-green-800 rounded-br-md border-2 border-green-300/50">
+                      <p className="text-sm leading-relaxed">
+                        {interimTranscript || (isListening ? "🎤 Sto ascoltando..." : "")}
                       </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Typing Indicator */}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="flex items-end space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-white text-sm">
-                    ☕
-                  </div>
-                  <div className="bg-gray-100 px-4 py-2 rounded-2xl rounded-bl-md">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      {confidence > 0 && (
+                        <p className="text-xs text-green-600 mt-1">
+                          Confidenza: {Math.round(confidence * 100)}%
+                        </p>
+                      )}
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Typing Indicator */}
+            <AnimatePresence>
+              {isTyping && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="flex justify-start"
+                >
+                  <div className="flex items-end space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center text-white shadow-lg">
+                      ☕
+                    </div>
+                    <div className="bg-white/80 backdrop-blur-md px-4 py-3 rounded-2xl rounded-bl-md border border-white/40 shadow-lg">
+                      <div className="flex space-x-1">
+                        <motion.div 
+                          className="w-2 h-2 bg-orange-400 rounded-full"
+                          animate={{ y: [0, -8, 0] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay: 0 }}
+                        />
+                        <motion.div 
+                          className="w-2 h-2 bg-orange-400 rounded-full"
+                          animate={{ y: [0, -8, 0] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay: 0.1 }}
+                        />
+                        <motion.div 
+                          className="w-2 h-2 bg-orange-400 rounded-full"
+                          animate={{ y: [0, -8, 0] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             <div ref={messagesEndRef} />
           </div>
 
           {/* Input Area */}
           {!isComplete && chatPhase === 'questions' && (
-            <div className="border-t border-gray-200 p-4">
+            <div className="border-t border-white/20 p-6 bg-white/5 backdrop-blur-md">
               {/* Voice Error Display */}
-              {voiceError && (
-                <div className="mb-3 p-2 bg-red-100 text-red-600 rounded-md text-sm">
-                  {voiceError}
-                </div>
-              )}
+              <AnimatePresence>
+                {voiceError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mb-4 p-3 bg-red-100/80 backdrop-blur-md text-red-600 rounded-xl text-sm border border-red-200/50"
+                  >
+                    {voiceError}
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               <div className="flex space-x-3">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={currentMessage || finalTranscript}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Scrivi o parla la tua risposta..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-600 focus:border-transparent"
-                  disabled={isTyping}
-                />
+                {/* Input Field */}
+                <div className="flex-1 relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={currentMessage || finalTranscript}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Scrivi o parla la tua risposta..."
+                    className="w-full px-4 py-3 bg-white/50 backdrop-blur-md border border-white/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all focus:bg-white/70"
+                    disabled={isTyping}
+                  />
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl bg-gradient-to-r from-orange-500/20 to-yellow-500/20 -z-10"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                </div>
                 
-                {/* Voice Button */}
+                {/* Voice Button - Liquid Glass */}
                 {isRecordingSupported && (
-                  <button
+                  <motion.button
                     onClick={isListening ? stopListening : startListening}
                     disabled={isTyping}
-                    className={`p-3 rounded-full transition-all duration-200 ${
-                      isListening
-                        ? 'bg-red-500 text-white animate-pulse hover:bg-red-600'
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    title={isListening ? 'Ferma registrazione' : 'Inizia registrazione vocale'}
+                    className="bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 p-3 rounded-2xl shadow-lg transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                    style={{
+                      background: isListening
+                        ? "linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(185, 28, 28, 0.8) 100%)"
+                        : "linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(21, 128, 61, 0.8) 100%)"
+                    }}
+                    whileHover={{ scale: isTyping ? 1 : 1.05 }}
+                    whileTap={{ scale: isTyping ? 1 : 0.95 }}
+                    transition={{ type: "spring", stiffness: 300 }}
                   >
-                    {isListening ? <MicOff size={20} /> : <Mic size={20} />}
-                  </button>
+                    {/* Liquid Glass Effect */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-0 group-hover:opacity-100"
+                      initial={{ x: "-100%" }}
+                      whileHover={{ x: "100%" }}
+                      transition={{ duration: 0.6, ease: "easeInOut" }}
+                    />
+                    
+                    <motion.div
+                      animate={isListening ? { scale: [1, 1.2, 1] } : {}}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="relative z-10"
+                    >
+                      {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                    </motion.div>
+                    
+                    <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-all duration-300" />
+                  </motion.button>
                 )}
                 
-                {/* Send Button */}
-                <button
+                {/* Send Button - Liquid Glass */}
+                <motion.button
                   onClick={handleSendMessage}
                   disabled={(!currentMessage.trim() && !finalTranscript.trim()) || isTyping}
-                  className="px-6 py-3 bg-amber-600 text-white rounded-full hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 px-6 py-3 rounded-2xl shadow-lg transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                  style={{
+                    background: (!currentMessage.trim() && !finalTranscript.trim()) || isTyping
+                      ? "rgba(255, 255, 255, 0.1)" 
+                      : "linear-gradient(135deg, rgba(249, 115, 22, 0.8) 0%, rgba(251, 146, 60, 0.8) 50%, rgba(253, 186, 116, 0.8) 100%)"
+                  }}
+                  whileHover={{ scale: ((!currentMessage.trim() && !finalTranscript.trim()) || isTyping) ? 1 : 1.05 }}
+                  whileTap={{ scale: ((!currentMessage.trim() && !finalTranscript.trim()) || isTyping) ? 1 : 0.95 }}
+                  transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <Send size={20} />
-                  Invia
-                </button>
+                  {/* Liquid Glass Effect */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-0 group-hover:opacity-100"
+                    initial={{ x: "-100%" }}
+                    whileHover={{ x: "100%" }}
+                    transition={{ duration: 0.6, ease: "easeInOut" }}
+                  />
+                  
+                  <div className="relative z-10 flex items-center gap-2">
+                    <Send size={20} />
+                    <span className="font-medium">Invia</span>
+                  </div>
+                  
+                  <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-all duration-300" />
+                </motion.button>
               </div>
               
               {/* Voice Status */}
-              {isRecordingSupported && (
-                <div className="mt-2 text-center">
-                  <p className="text-xs text-gray-500">
-                    {isListening 
-                      ? "🎤 Registrazione in corso... Parla ora!" 
-                      : "Clicca il microfono per parlare"}
-                  </p>
-                </div>
-              )}
-              
-              {!isRecordingSupported && (
-                <div className="mt-2 text-center">
-                  <p className="text-xs text-yellow-600">
+              <div className="mt-4 text-center">
+                {isRecordingSupported ? (
+                  <motion.p
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="text-xs text-gray-500 flex items-center justify-center gap-2"
+                  >
+                    {isListening ? (
+                      <>
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                          className="w-2 h-2 bg-red-500 rounded-full"
+                        />
+                        🎤 Registrazione in corso... Parla ora!
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-3 h-3" />
+                        Clicca il microfono per parlare
+                      </>
+                    )}
+                  </motion.p>
+                ) : (
+                  <p className="text-xs text-yellow-600 flex items-center justify-center gap-2">
+                    <VolumeX className="w-3 h-3" />
                     ⚠️ Riconoscimento vocale non supportato dal browser
                   </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
           
           {/* Status Messages */}
           {chatPhase !== 'questions' && !isComplete && (
-            <div className="border-t border-gray-200 p-6 text-center">
-              <div className="text-amber-600">
-                {chatPhase === 'greeting' && "👋 Salutando..."}
-                {chatPhase === 'intro' && "💬 Spiegando il processo..."}
-              </div>
+            <div className="border-t border-white/20 p-6 text-center bg-white/5 backdrop-blur-md">
+              <motion.div
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="text-orange-600 flex items-center justify-center gap-2"
+              >
+                {chatPhase === 'greeting' && (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    >
+                      👋
+                    </motion.div>
+                    Salutando...
+                  </>
+                )}
+                {chatPhase === 'intro' && (
+                  <>
+                    <MessageCircle className="w-4 h-4" />
+                    💬 Spiegando il processo...
+                  </>
+                )}
+              </motion.div>
             </div>
           )}
           
           {/* Completion Message */}
           {isComplete && (
-            <div className="border-t border-gray-200 p-6 text-center">
-              <div className="animate-pulse">
-                <div className="text-4xl mb-2">🎉</div>
-                <p className="text-amber-800 font-semibold">
-                  Profilo completato! Ti stiamo portando alla dashboard...
-                </p>
-              </div>
+            <div className="border-t border-white/20 p-8 text-center bg-gradient-to-br from-green-500/10 to-blue-500/10 backdrop-blur-md">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                className="space-y-4"
+              >
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.1, 1]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-6xl"
+                >
+                  🎉
+                </motion.div>
+                <div>
+                  <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600 mb-2">
+                    Profilo Completato!
+                  </h3>
+                  <p className="text-gray-600">
+                    Ti stiamo portando alla dashboard...
+                  </p>
+                </div>
+                
+                {/* Liquid Glass Success Button */}
+                <motion.div
+                  className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-8 py-4 rounded-3xl shadow-lg relative overflow-hidden mx-auto inline-block"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(59, 130, 246, 0.8) 50%, rgba(99, 102, 241, 0.8) 100%)"
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  {/* Shimmer Effect */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                    animate={{
+                      x: ["-100%", "100%"],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    style={{ width: "50%" }}
+                  />
+                  
+                  <div className="relative z-10 flex items-center gap-3">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Shield className="w-6 h-6" />
+                    </motion.div>
+                    <span className="font-semibold">Reindirizzamento...</span>
+                    <motion.div
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      <ArrowRight className="w-5 h-5" />
+                    </motion.div>
+                  </div>
+                  
+                  <div className="absolute inset-0 rounded-3xl border border-white/20" />
+                </motion.div>
+              </motion.div>
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import ImageCarousel from "@/components/ImageCarousel";
-
-const loginImages = ["/login1.jpg", "/login2.jpg", "/login3.jpg"];
+import { motion, AnimatePresence } from "framer-motion";
+import { Mail, Phone, Eye, EyeOff, User, Lock, ArrowRight, Shield, LogIn, RefreshCw } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth(); // Add this line!
+  const { login } = useAuth();
 
   // Form state
   const [step, setStep] = useState(1); // 1 = login form, 2 = verification
@@ -31,6 +30,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Check for verification success message
   useEffect(() => {
@@ -62,7 +62,6 @@ export default function LoginPage() {
         // Handle special case for unverified accounts
         if (data.needsVerification) {
           setError("Account non verificato. Vuoi completare la verifica?");
-          // Could add a link to resend verification here
           return;
         }
         
@@ -177,133 +176,432 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#FDF8F3]">
-      {/* Left image carousel */}
-      <div className="w-full md:w-1/2 h-64 md:h-auto">
-        <ImageCarousel images={loginImages} />
+    <div className="min-h-screen bg-apple-mesh pt-20">
+      {/* Floating Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-gradient-to-r from-blue-400/10 to-purple-400/10 backdrop-blur-sm"
+            style={{
+              width: `${60 + i * 20}px`,
+              height: `${60 + i * 20}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [-20, 20, -20],
+              x: [-10, 10, -10],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{
+              duration: 4 + i,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
       </div>
 
-      {/* Login form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center px-4 py-12">
-        {step === 1 ? (
-          <form
-            onSubmit={handleLoginSubmit}
-            className="w-full max-w-md bg-white p-10 rounded-xl shadow-xl space-y-6"
-          >
-            <h2 className="text-3xl font-bold text-center text-brand-coral">
-              Accedi al tuo account
-            </h2>
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
+        <AnimatePresence mode="wait">
+          {step === 1 ? (
+            <motion.div
+              key="login-form"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="w-full max-w-md"
+            >
+              <div className="card-apple p-8">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className="w-16 h-16 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center"
+                  >
+                    <LogIn className="w-8 h-8 text-white" />
+                  </motion.div>
+                  <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-2">
+                    Bentornato
+                  </h1>
+                  <p className="text-gray-600">
+                    Accedi al tuo account Caffis
+                  </p>
+                </div>
 
-            {successMessage && (
-              <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-md text-sm">
-                {successMessage}
+                {/* Success Message */}
+                {successMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-green-50/80 backdrop-blur-md border border-green-200/50 text-green-700 px-4 py-3 rounded-xl text-sm mb-6"
+                  >
+                    {successMessage}
+                  </motion.div>
+                )}
+
+                <form onSubmit={handleLoginSubmit} className="space-y-6">
+                  {/* Email/Username Field */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="relative"
+                  >
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 w-5 h-5" />
+                    <input
+                      type="text"
+                      name="emailOrUsername"
+                      placeholder="Email, telefono o username"
+                      value={form.emailOrUsername}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-10 pr-4 py-3 bg-white/50 backdrop-blur-md border border-blue-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 focus:bg-white/70"
+                    />
+                    {/* Gradient Border Animation */}
+                    <motion.div
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 -z-10"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                    />
+                  </motion.div>
+
+                  {/* Password Field */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="relative"
+                  >
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-500 w-5 h-5" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      placeholder="Password"
+                      value={form.password}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-10 pr-12 py-3 bg-white/50 backdrop-blur-md border border-purple-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 focus:bg-white/70"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                    {/* Gradient Border Animation */}
+                    <motion.div
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 -z-10"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
+                    />
+                  </motion.div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-red-50/80 backdrop-blur-md border border-red-200/50 text-red-600 px-4 py-3 rounded-xl text-sm"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+
+                  {/* Submit Button - Liquid Glass */}
+                  <motion.button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 px-8 py-4 text-lg rounded-3xl shadow-2xl transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                    style={{
+                      background: loading 
+                        ? "rgba(255, 255, 255, 0.1)" 
+                        : "linear-gradient(135deg, rgba(59, 130, 246, 0.8) 0%, rgba(139, 92, 246, 0.8) 50%, rgba(168, 85, 247, 0.8) 100%)"
+                    }}
+                    whileHover={{ scale: loading ? 1 : 1.02, y: -2 }}
+                    whileTap={{ scale: loading ? 1 : 0.98 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  >
+                    {/* Liquid Glass Effect Layer */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-0 group-hover:opacity-100"
+                      initial={{ x: "-100%" }}
+                      whileHover={{ x: "100%" }}
+                      transition={{ duration: 0.8, ease: "easeInOut" }}
+                    />
+                    
+                    {/* Shimmer Effect */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100"
+                      animate={{
+                        x: ["-100%", "100%"],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      style={{ width: "50%" }}
+                    />
+                    
+                    {/* Button Content */}
+                    <div className="relative z-10 flex items-center justify-center gap-3">
+                      {loading ? (
+                        <>
+                          <motion.div
+                            className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          />
+                          <span className="font-semibold">Accesso in corso...</span>
+                        </>
+                      ) : (
+                        <>
+                          <motion.div
+                            whileHover={{ rotate: 360, scale: 1.1 }}
+                            transition={{ duration: 0.6 }}
+                          >
+                            <LogIn className="w-6 h-6" />
+                          </motion.div>
+                          <span className="font-semibold">Continua</span>
+                          <motion.div
+                            animate={{ x: [0, 5, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                          >
+                            <ArrowRight className="w-5 h-5" />
+                          </motion.div>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Glass Border Effect */}
+                    <div className="absolute inset-0 rounded-3xl border border-white/20 group-hover:border-white/40 transition-all duration-300" />
+                  </motion.button>
+
+                  {/* Register Link */}
+                  <div className="text-center">
+                    <p className="text-gray-600 text-sm">
+                      Non hai un account?{" "}
+                      <a href="/register" className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 font-semibold hover:underline">
+                        Registrati
+                      </a>
+                    </p>
+                  </div>
+                </form>
               </div>
-            )}
-
-            <input
-              type="text"
-              name="emailOrUsername"
-              placeholder="Email, telefono o username"
-              value={form.emailOrUsername}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green"
-            />
-
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green"
-            />
-
-            {error && (
-              <p className="text-red-500 text-sm text-center">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#6BBF59] text-white py-3 rounded-md font-semibold hover:bg-[#5aad4e] transition disabled:opacity-50"
+            </motion.div>
+          ) : (
+            /* Verification Form */
+            <motion.div
+              key="verification-form"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="w-full max-w-md"
             >
-              {loading ? "Accesso in corso..." : "Continua"}
-            </button>
+              <div className="card-apple p-8">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center"
+                  >
+                    <div className="text-4xl">
+                      {loginData.verificationType === "email" ? "📧" : "📱"}
+                    </div>
+                  </motion.div>
+                  <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600 mb-2">
+                    Codice di Accesso
+                  </h1>
+                  <p className="text-gray-600 mb-2">
+                    Codice inviato a:
+                  </p>
+                  <p className="font-semibold text-gray-800">
+                    {loginData.contactInfo}
+                  </p>
+                </div>
 
-            <p className="text-sm text-center text-gray-500">
-              Non hai un account?{" "}
-              <a href="/register" className="text-brand-coral hover:underline">
-                Registrati
-              </a>
-            </p>
-          </form>
-        ) : (
-          // Step 2: Verification form
-          <form
-            onSubmit={handleVerificationSubmit}
-            className="w-full max-w-md bg-white p-10 rounded-xl shadow-xl space-y-6"
-          >
-            <div className="text-center">
-              <div className="text-6xl mb-4">
-                {loginData.verificationType === "email" ? "📧" : "📱"}
+                <form onSubmit={handleVerificationSubmit} className="space-y-6">
+                  {/* Verification Code Input */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="000000"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      maxLength={6}
+                      className="w-full px-4 py-4 bg-white/50 backdrop-blur-md border border-green-200/50 rounded-xl text-center text-3xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all focus:bg-white/70"
+                      required
+                      autoFocus
+                    />
+                    <div className="text-center mt-2">
+                      <span className="text-xs text-gray-500">
+                        Inserisci il codice a 6 cifre
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-red-50/80 backdrop-blur-md border border-red-200/50 text-red-600 px-4 py-3 rounded-xl text-sm text-center"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+
+                  {/* Submit Button - Liquid Glass */}
+                  <motion.button
+                    type="submit"
+                    disabled={loading || verificationCode.length !== 6}
+                    className="w-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 px-8 py-4 text-lg rounded-3xl shadow-2xl transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                    style={{
+                      background: loading 
+                        ? "rgba(255, 255, 255, 0.1)" 
+                        : "linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(59, 130, 246, 0.8) 50%, rgba(99, 102, 241, 0.8) 100%)"
+                    }}
+                    whileHover={{ scale: (loading || verificationCode.length !== 6) ? 1 : 1.02, y: -2 }}
+                    whileTap={{ scale: (loading || verificationCode.length !== 6) ? 1 : 0.98 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  >
+                    {/* Liquid Glass Effect Layer */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-0 group-hover:opacity-100"
+                      initial={{ x: "-100%" }}
+                      whileHover={{ x: "100%" }}
+                      transition={{ duration: 0.8, ease: "easeInOut" }}
+                    />
+                    
+                    {/* Shimmer Effect */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100"
+                      animate={{
+                        x: ["-100%", "100%"],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      style={{ width: "50%" }}
+                    />
+                    
+                    {/* Button Content */}
+                    <div className="relative z-10 flex items-center justify-center gap-3">
+                      {loading ? (
+                        <>
+                          <motion.div
+                            className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          />
+                          <span className="font-semibold">Verifica in corso...</span>
+                        </>
+                      ) : (
+                        <>
+                          <motion.div
+                            whileHover={{ rotate: 360, scale: 1.1 }}
+                            transition={{ duration: 0.6 }}
+                          >
+                            <Shield className="w-6 h-6" />
+                          </motion.div>
+                          <span className="font-semibold">Accedi</span>
+                          <motion.div
+                            animate={{ x: [0, 5, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                          >
+                            <ArrowRight className="w-5 h-5" />
+                          </motion.div>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Glass Border Effect */}
+                    <div className="absolute inset-0 rounded-3xl border border-white/20 group-hover:border-white/40 transition-all duration-300" />
+                  </motion.button>
+
+                  {/* Resend Code - Liquid Glass Style */}
+                  <div className="text-center space-y-3">
+                    <p className="text-sm text-gray-500">Non hai ricevuto il codice?</p>
+                    <motion.button
+                      type="button"
+                      onClick={handleResendLoginCode}
+                      disabled={loading}
+                      className="bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 px-6 py-3 rounded-2xl shadow-lg transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                      style={{
+                        background: loading
+                          ? "rgba(255, 255, 255, 0.1)" 
+                          : "linear-gradient(135deg, rgba(251, 146, 60, 0.6) 0%, rgba(249, 115, 22, 0.6) 50%, rgba(239, 68, 68, 0.6) 100%)"
+                      }}
+                      whileHover={{ scale: loading ? 1 : 1.05 }}
+                      whileTap={{ scale: loading ? 1 : 0.95 }}
+                    >
+                      {/* Liquid Glass Effect */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-0 group-hover:opacity-100"
+                        initial={{ x: "-100%" }}
+                        whileHover={{ x: "100%" }}
+                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                      />
+                      
+                      <span className="relative z-10 font-medium text-sm flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4" />
+                        Invia di nuovo
+                      </span>
+                      
+                      <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-all duration-300" />
+                    </motion.button>
+                  </div>
+
+                  {/* Back Button - Liquid Glass Style */}
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      setStep(1);
+                      setVerificationCode("");
+                      setError("");
+                    }}
+                    className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-gray-400 hover:text-white hover:bg-white/20 py-3 rounded-2xl shadow-lg transition-all duration-500 relative overflow-hidden group"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {/* Liquid Glass Effect */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-white/5 via-white/10 to-white/5 opacity-0 group-hover:opacity-100"
+                      initial={{ x: "-100%" }}
+                      whileHover={{ x: "100%" }}
+                      transition={{ duration: 0.6, ease: "easeInOut" }}
+                    />
+                    
+                    <span className="relative z-10 font-medium text-sm flex items-center justify-center gap-2">
+                      <motion.span
+                        animate={{ x: [-2, 2, -2] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        ←
+                      </motion.span>
+                      Torna al login
+                    </span>
+                    
+                    <div className="absolute inset-0 rounded-2xl border border-white/10 group-hover:border-white/30 transition-all duration-300" />
+                  </motion.button>
+                </form>
               </div>
-              <h2 className="text-2xl font-bold text-brand-coral mb-2">
-                Inserisci il codice
-              </h2>
-              <p className="text-gray-600 text-sm">
-                Abbiamo inviato un codice di accesso a:<br />
-                <strong>{loginData.contactInfo}</strong>
-              </p>
-            </div>
-
-            <input
-              type="text"
-              placeholder="Codice a 6 cifre"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              maxLength={6}
-              className="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-brand-green text-center text-2xl tracking-widest font-mono"
-              required
-              autoFocus
-            />
-
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading || verificationCode.length !== 6}
-              className="w-full bg-[#6BBF59] text-white py-3 rounded-md font-semibold hover:bg-[#5aad4e] transition disabled:opacity-50"
-            >
-              {loading ? "Verifica in corso..." : "Accedi"}
-            </button>
-
-            <div className="text-center space-y-2">
-              <p className="text-sm text-gray-500">Non hai ricevuto il codice?</p>
-              <button
-                type="button"
-                onClick={handleResendLoginCode}
-                disabled={loading}
-                className="text-brand-coral hover:underline text-sm disabled:opacity-50"
-              >
-                Invia di nuovo
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStep(1);
-                setVerificationCode("");
-                setError("");
-              }}
-              className="w-full text-gray-500 py-2 text-sm hover:underline"
-            >
-              ← Torna al login
-            </button>
-          </form>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

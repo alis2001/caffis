@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth, useRequireAuth } from "@/contexts/AuthContext";
 import { Coffee, Users, MapPin, Calendar, User, MessageCircle, Settings, Bell, Plus } from "lucide-react";
 
 // Apple WWDC 2025 inspired components
@@ -96,31 +98,12 @@ const QuickAction = ({ title, icon, variant, onClick }) => {
   );
 };
 
-// Mock user data - replace with your actual auth system
-const mockUser = {
-  firstName: "Ali",
-  lastName: "Rossi",
-  onboardingCompleted: true,
-  isEmailVerified: true,
-  isPhoneVerified: true
-};
-
-// Mock navigation function - replace with your actual navigation
-const mockNavigate = (path: string) => {
-  console.log(`Navigate to: ${path}`);
-  // You can implement actual navigation here based on your setup
-  // For example: window.location.href = path;
-};
-
 export default function AppleDashboard() {
+  const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { shouldRedirect, isLoading: authLoading } = useRequireAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Mock loading state - replace with your actual loading logic
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Use mock user data - replace with your actual user data
-  const user = mockUser;
-
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => {
@@ -129,26 +112,30 @@ export default function AppleDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Mock authentication check - replace with your actual auth logic
-  // useEffect(() => {
-  //   if (shouldRedirect) {
-  //     mockNavigate('/login');
-  //   }
-  // }, [shouldRedirect]);
+  // Authentication check - redirect to login if not authenticated
+  useEffect(() => {
+    if (shouldRedirect) {
+      router.push('/login');
+    }
+  }, [shouldRedirect, router]);
 
-  // Mock onboarding check - replace with your actual onboarding logic
-  // useEffect(() => {
-  //   if (user && !user.onboardingCompleted) {
-  //     mockNavigate('/onboarding');
-  //   }
-  // }, [user]);
+  // Onboarding check - redirect to onboarding if not completed
+  useEffect(() => {
+    if (user && !authLoading && !user.onboardingCompleted) {
+      console.log('User onboarding not completed, redirecting to /onboarding');
+      router.push('/onboarding');
+    }
+  }, [user, authLoading, router]);
 
-  if (isLoading) {
+  // Show loading if checking auth or redirecting
+  if (authLoading || (user && !user.onboardingCompleted)) {
     return (
       <div className="min-h-screen bg-apple-mesh flex items-center justify-center">
         <div className="card-apple text-center py-12 px-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Caricamento dashboard...</p>
+          <p className="text-gray-600">
+            {!user?.onboardingCompleted ? 'Reindirizzamento al setup profilo...' : 'Caricamento dashboard...'}
+          </p>
         </div>
       </div>
     );
@@ -257,6 +244,26 @@ export default function AppleDashboard() {
           box-shadow: var(--shadow-large);
         }
 
+        .feature-card:hover::before {
+          opacity: 0.1;
+        }
+
+        .feature-card-coffee::before {
+          background: var(--gradient-coffee);
+        }
+
+        .feature-card-social::before {
+          background: var(--gradient-social);
+        }
+
+        .feature-card-events::before {
+          background: var(--gradient-events);
+        }
+
+        .feature-card-profile::before {
+          background: var(--gradient-profile);
+        }
+
         .bg-apple-mesh {
           background: 
             radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.3) 0%, transparent 50%),
@@ -273,10 +280,33 @@ export default function AppleDashboard() {
           background-clip: text;
         }
 
-        .icon-coffee { background: var(--gradient-coffee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .icon-social { background: var(--gradient-social); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .icon-events { background: var(--gradient-events); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .icon-profile { background: var(--gradient-profile); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .icon-coffee {
+          background: var(--gradient-coffee);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .icon-social {
+          background: var(--gradient-social);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .icon-events {
+          background: var(--gradient-events);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .icon-profile {
+          background: var(--gradient-profile);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
       `}</style>
 
       <div className="pt-20 pb-12">
@@ -353,25 +383,25 @@ export default function AppleDashboard() {
                 title="Trova Caffè Ora"
                 icon={<Coffee />}
                 variant="coffee"
-                onClick={() => mockNavigate('/find-coffee')}
+                onClick={() => router.push('/find-coffee')}
               />
               <QuickAction
                 title="Crea Evento"
                 icon={<Plus />}
                 variant="events"
-                onClick={() => mockNavigate('/create-event')}
+                onClick={() => router.push('/create-event')}
               />
               <QuickAction
                 title="Messaggi"
                 icon={<MessageCircle />}
                 variant="chat"
-                onClick={() => mockNavigate('/messages')}
+                onClick={() => router.push('/messages')}
               />
               <QuickAction
                 title="Profilo"
                 icon={<User />}
                 variant="profile"
-                onClick={() => mockNavigate('/profile')}
+                onClick={() => router.push('/profile')}
               />
             </div>
           </div>
@@ -385,7 +415,7 @@ export default function AppleDashboard() {
               description="Trova persone interessanti vicino a te per un caffè spontaneo"
               icon={<Coffee />}
               variant="coffee"
-              onClick={() => mockNavigate('/discover')}
+              onClick={() => router.push('/discover')}
               stats={[
                 { value: "23", label: "Persone Online" },
                 { value: "5", label: "Nelle Vicinanze" }
@@ -398,7 +428,7 @@ export default function AppleDashboard() {
               description="Gestisci le tue amicizie caffè e scopri nuove personalità compatibili"
               icon={<Users />}
               variant="social"
-              onClick={() => mockNavigate('/connections')}
+              onClick={() => router.push('/connections')}
               stats={[
                 { value: "47", label: "Connessioni" },
                 { value: "92%", label: "Compatibilità" }
@@ -411,7 +441,7 @@ export default function AppleDashboard() {
               description="Organizza e partecipa a meetup caffè nella tua zona"
               icon={<Calendar />}
               variant="events"
-              onClick={() => mockNavigate('/events')}
+              onClick={() => router.push('/events')}
               stats={[
                 { value: "3", label: "Programmati" },
                 { value: "12", label: "Completati" }
@@ -424,7 +454,7 @@ export default function AppleDashboard() {
               description="Scopri i migliori caffè e luoghi di incontro della tua città"
               icon={<MapPin />}
               variant="location"
-              onClick={() => mockNavigate('/locations')}
+              onClick={() => router.push('/locations')}
               stats={[
                 { value: "156", label: "Caffè Partner" },
                 { value: "4.8★", label: "Rating Medio" }
@@ -437,7 +467,7 @@ export default function AppleDashboard() {
               description="Personalizza le tue preferenze e gestisci il tuo account"
               icon={<User />}
               variant="profile"
-              onClick={() => mockNavigate('/profile')}
+              onClick={() => router.push('/profile')}
               stats={[
                 { value: "85%", label: "Completezza" },
                 { value: "Verificato", label: "Stato" }
@@ -450,7 +480,7 @@ export default function AppleDashboard() {
               description="Chiacchiera con i tuoi compagni di caffè e organizza incontri"
               icon={<MessageCircle />}
               variant="chat"
-              onClick={() => mockNavigate('/chat')}
+              onClick={() => router.push('/chat')}
               stats={[
                 { value: "7", label: "Chat Attive" },
                 { value: "2", label: "Non Letti" }
@@ -580,7 +610,7 @@ export default function AppleDashboard() {
                     size="small" 
                     className="w-full"
                     icon={<Settings />}
-                    onClick={() => mockNavigate('/settings')}
+                    onClick={() => router.push('/settings')}
                   >
                     Tutte le Impostazioni
                   </AppleButton>
@@ -604,7 +634,7 @@ export default function AppleDashboard() {
                   variant="primary" 
                   size="large"
                   icon={<Coffee />}
-                  onClick={() => mockNavigate('/discover')}
+                  onClick={() => router.push('/discover')}
                 >
                   Trova Caffè Ora
                 </AppleButton>
@@ -612,7 +642,7 @@ export default function AppleDashboard() {
                   variant="events" 
                   size="large"
                   icon={<Plus />}
-                  onClick={() => mockNavigate('/create-event')}
+                  onClick={() => router.push('/create-event')}
                 >
                   Crea Evento
                 </AppleButton>

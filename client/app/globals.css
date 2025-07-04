@@ -475,16 +475,30 @@ body {
   transition: all 300ms ease-out;
 }
 
-/* Force footer section to take only 50vh height */
-#footer-section,
-#footer-section .fp-slide,
-#footer-section .fp-tableCell {
+/* ============================================ */
+/*         FULLPAGE.JS FOOTER FIX            */
+/* ============================================ */
+
+/* Make footer section exactly half height */
+.fp-section:last-child {
   height: 50vh !important;
-  min-height: 50vh !important;
-  max-height: 50vh !important;
 }
 
-#fp-section-2,
-#fp-section-2 .fp-tableCell {
+.fp-section:last-child .fp-tableCell {
   height: 50vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Remove any background overlays or faded rectangles */
+.fp-section:last-child .fp-slide,
+.fp-section:last-child .fp-slide .fp-tableCell {
+  background: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Ensure the footer content uses the same mesh background as other sections */
+.fp-section:last-child {
+  background: inherit !important;
 }

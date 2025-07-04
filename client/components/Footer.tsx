@@ -10,30 +10,27 @@ export default function Footer() {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       viewport={{ once: true }}
-      className="relative w-full bg-apple-mesh py-16 overflow-hidden"
+      className="relative w-full h-full flex items-center justify-center py-8 overflow-hidden"
     >
-      {/* Background Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-pink-900/5 to-blue-900/10" />
-      
-      {/* Floating Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
+      {/* Floating Background Elements - More Subtle */}
+      <div className="absolute inset-0 overflow-hidden opacity-30">
         {[...Array(4)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute rounded-full bg-gradient-to-r from-purple-400/20 to-pink-400/20 backdrop-blur-sm"
+            className="absolute rounded-full bg-gradient-to-r from-purple-400/10 to-pink-400/10"
             style={{
-              width: `${60 + i * 20}px`,
-              height: `${60 + i * 20}px`,
+              width: `${40 + i * 10}px`,
+              height: `${40 + i * 10}px`,
               left: `${20 + i * 20}%`,
-              top: `${10 + i * 15}%`,
+              top: `${20 + i * 15}%`,
             }}
             animate={{
-              y: [-10, 10, -10],
-              x: [-5, 5, -5],
-              scale: [1, 1.1, 1],
+              y: [-5, 5, -5],
+              x: [-3, 3, -3],
+              scale: [1, 1.05, 1],
             }}
             transition={{
-              duration: 4 + i,
+              duration: 3 + i,
               repeat: Infinity,
               ease: "easeInOut",
             }}
@@ -42,8 +39,8 @@ export default function Footer() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           
           {/* Branding Section */}
           <motion.div
@@ -52,25 +49,25 @@ export default function Footer() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-center md:text-left"
           >
-            <div className="flex items-center justify-center md:justify-start mb-6">
-              <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mr-4 shadow-lg">
-                <Coffee className="w-8 h-8 text-white" />
+            <div className="flex items-center justify-center md:justify-start mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mr-3 shadow-lg">
+                <Coffee className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
                   Caffis
                 </h3>
-                <p className="text-sm text-gray-600">Connettiti con un caffè</p>
+                <p className="text-xs text-gray-600">Connettiti con un caffè</p>
               </div>
             </div>
             
-            <p className="text-gray-600 mb-6 leading-relaxed">
-              La piattaforma social che connette persone autentiche attraverso l'amore condiviso per il caffè e le conversazioni genuine.
+            <p className="text-gray-600 mb-4 leading-relaxed text-sm">
+              La piattaforma social che connette persone autentiche attraverso l'amore condiviso per il caffè.
             </p>
             
-            <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
-              <MapPin className="w-4 h-4 text-purple-500" />
-              <span className="text-sm text-gray-600">Torino, Italia</span>
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+              <MapPin className="w-3 h-3 text-purple-500" />
+              <span className="text-xs text-gray-600">Torino, Italia</span>
             </div>
             
             <p className="text-xs text-gray-500">
@@ -85,8 +82,8 @@ export default function Footer() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-center md:text-left"
           >
-            <h4 className="text-xl font-bold text-gray-900 mb-6">Link Utili</h4>
-            <div className="space-y-3">
+            <h4 className="text-lg font-bold text-gray-900 mb-4">Link Utili</h4>
+            <div className="space-y-2">
               {[
                 { label: "Privacy Policy", href: "/privacy" },
                 { label: "Termini di Servizio", href: "/terms" },
@@ -98,8 +95,8 @@ export default function Footer() {
                 <motion.a
                   key={link.label}
                   href={link.href}
-                  className="block text-gray-600 hover:text-purple-600 transition-colors duration-200 hover:translate-x-2 transform"
-                  whileHover={{ scale: 1.05 }}
+                  className="block text-gray-600 hover:text-purple-600 transition-colors duration-200 text-sm hover:translate-x-1 transform"
+                  whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
                   {link.label}
@@ -115,10 +112,10 @@ export default function Footer() {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-center md:text-right"
           >
-            <h4 className="text-xl font-bold text-gray-900 mb-6">Seguici</h4>
+            <h4 className="text-lg font-bold text-gray-900 mb-4">Seguici</h4>
             
             {/* Social Icons */}
-            <div className="flex justify-center md:justify-end gap-4 mb-8">
+            <div className="flex justify-center md:justify-end gap-3 mb-6">
               {[
                 { icon: Instagram, href: "https://instagram.com/caffis", color: "from-pink-500 to-purple-500" },
                 { icon: Linkedin, href: "https://linkedin.com/company/caffis", color: "from-blue-500 to-blue-600" },
@@ -129,29 +126,29 @@ export default function Footer() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${social.color} flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300`}
+                  className={`w-10 h-10 rounded-xl bg-gradient-to-r ${social.color} flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300`}
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <social.icon size={20} />
+                  <social.icon size={16} />
                 </motion.a>
               ))}
             </div>
 
-            {/* Newsletter */}
-            <div className="card-apple bg-gradient-to-br from-purple-50 to-pink-50 p-6 mb-6">
-              <h5 className="font-semibold text-gray-900 mb-3">Newsletter</h5>
-              <p className="text-sm text-gray-600 mb-4">
-                Ricevi aggiornamenti sui nuovi caffè partner e eventi esclusivi
+            {/* Newsletter - Compact */}
+            <div className="bg-gradient-to-br from-purple-50/80 to-pink-50/80 backdrop-blur-sm p-4 rounded-xl mb-4 border border-purple-100/50">
+              <h5 className="font-semibold text-gray-900 mb-2 text-sm">Newsletter</h5>
+              <p className="text-xs text-gray-600 mb-3">
+                Ricevi aggiornamenti sui nuovi caffè partner
               </p>
               <div className="flex gap-2">
                 <input
                   type="email"
                   placeholder="La tua email"
-                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
-                <button className="btn-apple-base btn-primary px-4 py-2 text-sm">
-                  <Heart className="w-4 h-4" />
+                <button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:scale-105 transition-transform">
+                  <Heart className="w-3 h-3" />
                 </button>
               </div>
             </div>
@@ -159,11 +156,11 @@ export default function Footer() {
             {/* Main CTA */}
             <motion.a
               href="/register"
-              className="btn-apple-base btn-primary px-8 py-4 text-lg shadow-xl inline-flex items-center gap-3"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg inline-flex items-center gap-2 hover:scale-105 transition-transform text-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Coffee className="w-5 h-5" />
+              <Coffee className="w-4 h-4" />
               Unisciti Ora
             </motion.a>
           </motion.div>
@@ -174,10 +171,10 @@ export default function Footer() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-16 pt-8 border-t border-white/20 text-center"
+          className="mt-8 pt-6 border-t border-gray-200/50 text-center"
         >
-          <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
-            Made with <Heart className="w-4 h-4 text-red-500" /> in Torino
+          <p className="text-gray-500 text-xs flex items-center justify-center gap-2">
+            Made with <Heart className="w-3 h-3 text-red-500" /> in Torino
             <span className="mx-2">•</span>
             Connecting people one coffee at a time
           </p>
