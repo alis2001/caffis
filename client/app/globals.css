@@ -56,3 +56,17 @@ body {
   transform: translateY(0);
   transition: all 300ms ease-out;
 }
+
+/* ✅ Force footer section to take only 50vh height */
+#footer-section,
+#footer-section .fp-slide,
+#footer-section .fp-tableCell {
+  height: 50vh !important;
+  min-height: 50vh !important;
+  max-height: 50vh !important;
+}
+
+#fp-section-2,
+#fp-section-2 .fp-tableCell {
+  height: 50vh !important;
+}

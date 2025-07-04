@@ -11,10 +11,9 @@ export default function Footer() {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         viewport={{ once: true }}
-        className="relative h-full w-full flex flex-col justify-center bg-[#FDF8F3] text-gray-700 pt-20 pb-20 border-t border-gray-200 overflow-hidden"
-    >
-
-      {/* ✅ Background Image that fully covers footer */}
+        className="relative w-full flex flex-col justify-end items-center bg-[#FDF8F3] text-gray-700 border-t border-gray-200 overflow-hidden pb-12 pt-10"
+     >
+      {/* ✅ Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
           src="/Footerbackground.png"
@@ -27,7 +26,7 @@ export default function Footer() {
       </div>
 
       {/* ✅ Foreground Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
+      <div className="relative z-10 w-full max-w-7xl px-6 grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
         {/* Branding */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
           <Image
@@ -47,50 +46,25 @@ export default function Footer() {
         {/* Links */}
         <div className="flex flex-col gap-2 items-center md:items-start text-sm">
           <h4 className="text-base font-semibold mb-2">Link utili</h4>
-          <a href="/privacy" className="hover:underline">
-            Privacy
-          </a>
-          <a href="/terms" className="hover:underline">
-            Termini
-          </a>
-          <a href="/contact" className="hover:underline">
-            Contattaci
-          </a>
+          <a href="/privacy" className="hover:underline">Privacy</a>
+          <a href="/terms" className="hover:underline">Termini</a>
+          <a href="/contact" className="hover:underline">Contattaci</a>
         </div>
 
         {/* Socials + CTA */}
         <div className="flex flex-col items-center md:items-end gap-4">
           <h4 className="text-base font-semibold">Seguici</h4>
           <div className="flex gap-4 text-gray-500">
-            <a
-              href="https://instagram.com/yourapp"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-              className="hover:text-brand-green transition"
-            >
+            <a href="https://instagram.com/yourapp" target="_blank" className="hover:text-brand-green transition">
               <Instagram size={20} />
             </a>
-            <a
-              href="https://linkedin.com/company/yourapp"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-              className="hover:text-brand-green transition"
-            >
+            <a href="https://linkedin.com/company/yourapp" target="_blank" className="hover:text-brand-green transition">
               <Linkedin size={20} />
             </a>
-            <a
-              href="https://twitter.com/yourapp"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Twitter"
-              className="hover:text-brand-green transition"
-            >
+            <a href="https://twitter.com/yourapp" target="_blank" className="hover:text-brand-green transition">
               <Twitter size={20} />
             </a>
           </div>
-
           <a
             href="/register"
             className="mt-4 inline-block bg-[#6BBF59] text-white px-5 py-2 rounded-full text-sm font-medium shadow-md hover:scale-105 transition"

@@ -12,29 +12,27 @@ export default function LandingSections() {
       licenseKey={"gplv3-license"}
       scrollingSpeed={900}
       navigation
-      anchors={["hero", "splitcards", "footer"]}
       scrollOverflow={true}
-      render={() => {
-        return (
-          <ReactFullpage.Wrapper>
-            {/* Hero Section */}
-            <div className="section h-screen w-screen p-0 m-0">
-              <HeroSlider />
-            </div>
+      anchors={["hero", "splitcards", "footer"]}
+      render={() => (
+        <ReactFullpage.Wrapper>
+          {/* Hero */}
+          <div className="section h-screen w-screen p-0 m-0">
+            <HeroSlider />
+          </div>
 
-            {/* Split Cards Section */}
-            <div className="section h-screen w-screen bg-brand-cream flex items-stretch justify-center">
-              <SplitCardsSection />
-            </div>
+          {/* Cards */}
+          <div className="section h-screen w-screen bg-brand-cream flex items-stretch justify-center">
+            <SplitCardsSection />
+          </div>
 
-            {/* Footer Section */}
-            <div className="section h-screen w-screen p-0 m-0">
-                <Footer />
-            </div>
+          {/* Footer - scrollable small section */}
+          <div className="section fp-auto-height bg-[#FDF8F3]">
+            <Footer />
+          </div>
 
-          </ReactFullpage.Wrapper>
-        );
-      }}
+        </ReactFullpage.Wrapper>
+      )}
     />
   );
 }
