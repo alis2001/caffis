@@ -13,21 +13,24 @@ export default function LandingSections() {
       scrollingSpeed={900}
       navigation
       scrollOverflow={true}
-      anchors={["hero", "splitcards", "footer"]}
+      anchors={["hero", "features", "footer"]}
+      navigationTooltips={["Home", "Features", "Contact"]}
       render={() => (
         <ReactFullpage.Wrapper>
-          {/* Hero */}
-          <div className="section h-screen w-screen p-0 m-0">
+          {/* Hero Section */}
+          <div className="section h-screen w-screen p-0 m-0 relative">
             <HeroSlider />
           </div>
 
-          {/* Cards */}
-          <div className="section h-screen w-screen bg-brand-cream flex items-stretch justify-center">
-            <SplitCardsSection />
+          {/* Features Section */}
+          <div className="section h-screen w-screen bg-apple-mesh flex items-center justify-center p-0 m-0">
+            <div className="w-full h-full flex items-center justify-center">
+              <SplitCardsSection />
+            </div>
           </div>
 
-          {/* Footer - scrollable small section */}
-          <div className="section fp-auto-height bg-[#FDF8F3]">
+          {/* Footer Section */}
+          <div className="section fp-auto-height bg-apple-mesh min-h-screen">
             <Footer />
           </div>
 
