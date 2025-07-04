@@ -6,6 +6,7 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const inviteRoutes = require('./routes/inviteRoutes');
 const requestRoutes = require('./routes/requestRoutes');
+const userRoutes = require('./routes/userRoutes'); // NEW
 
 dotenv.config(); // Load environment variables
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/user', userRoutes); // NEW user preferences routes
 
 // 404 handler - make sure this comes AFTER routes
 app.use((req, res, next) => {
@@ -33,3 +35,5 @@ app.use(errorHandler);
 app.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);
 });
+
+module.exports = app;

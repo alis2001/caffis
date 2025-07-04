@@ -1,4 +1,4 @@
-// prisma/schema.prisma
+// server/prisma/schema.prisma
 
 datasource db {
   provider = "postgresql"
@@ -10,22 +10,80 @@ generator client {
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
-
 model User {
-  id         String   @id @default(uuid())
-  firstName  String
-  lastName   String
-  username   String?   @unique
-  email      String   @unique
-  password   String
-  bio        String?
-  profilePic String?
-  invites    Invite[] @relation("HostInvites")
-  requests   Request[]
-  createdAt  DateTime @default(now())
+  id                String             @id @default(uuid())
+  firstName         String
+  lastName          String
+  username          String?            @unique
+  email             String?            @unique
+  phoneNumber       String?            @unique
+  password          String
+  bio               String?
+  profilePic        String?
+  
+  // Verification fields
+  isEmailVerified   Boolean            @default(false)
+  isPhoneVerified   Boolean            @default(false)
+  
+  // Onboarding preferences (UPDATED with standardized fields)
+  onboardingCompleted Boolean          @default(false)
+  ageRange            String?          // "18-24", "25-34", etc.
+  coffeePersonality   String?          // "quick", "balanced", "slow"
+  socialEnergy        String?          // "introvert", "ambivert", "extrovert"
+  conversationTopics  String?          // "work", "hobbies", "life_stories", etc.
+  groupPreference     String?          // "one_on_one", "small_group", "larger_group"
+  locationPreference  String?          // "quiet", "lively", "outdoor", "coworking"
+  timePreference      String?          // "spontaneous", "flexible", "planned"
+  socialGoals         String?          // "friendship", "networking", "fun", "learning"
+  meetingFrequency    String?          // "daily", "weekly", "biweekly", "monthly"
+  
+  // Relations
+  invites           Invite[]           @relation("HostInvites")
+  requests          Request[]
+  verificationCodes VerificationCode[]
+  preferences       UserPreferences[]  // NEW relation
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
+// NEW: Separate table for detailed preferences analytics
+model UserPreferences {
+  id            String   @id @default(uuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  preferences   Json     // Store all preferences as JSON for flexibility
+  completedAt   DateTime @default(now())
+  version       Int      @default(1) // For tracking preference updates
+}
 
+// NEW: Table to store verification codes (OTP)
+model VerificationCode {
+  id          String                 @id @default(uuid())
+  code        String                 // The 6-digit code
+  type        VerificationCodeType   // EMAIL or SMS
+  purpose     VerificationPurpose    // REGISTRATION, LOGIN, etc.
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  expiresAt   DateTime               // Code expires after X minutes
+  verified    Boolean                @default(false)
+  attempts    Int                    @default(0)  // Track failed attempts
+  createdAt   DateTime               @default(now())
+}
+
+// NEW: Enums for verification system
+enum VerificationCodeType {
+  EMAIL
+  SMS
+}
+
+enum VerificationPurpose {
+  REGISTRATION
+  LOGIN
+  PASSWORD_RESET
+}
+
+// Existing models (unchanged)
 model Invite {
   id          String    @id @default(uuid())
   title       String
