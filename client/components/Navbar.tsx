@@ -453,38 +453,24 @@ export default function Navbar() {
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 300 }}
+            className="flex items-center gap-3"
           >
-            {/* Logo with Custom Caffis Design */}
+            {/* Clean Logo - No Background */}
             <motion.div
-              className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg"
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
             >
-              <CaffisLogo className="w-6 h-6" />
-              
-              {/* Pulsing Glow Effect */}
-              <motion.div
-                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/50 to-pink-500/50 blur-lg"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.5, 0.8, 0.5]
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
+              <CaffisLogo className="w-10 h-10" />
             </motion.div>
             
-            {/* Brand Text with Gradient */}
+            {/* Brand Text with Updated Gradient */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
               <h1 className="text-2xl font-bold">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500">
                   Caffis
                 </span>
               </h1>
