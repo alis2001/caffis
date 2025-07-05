@@ -309,7 +309,7 @@ export default function AppleDashboard() {
         }
       `}</style>
 
-      <div className="pt-20 pb-12">
+      <div className="page-content-spacing pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header Section */}

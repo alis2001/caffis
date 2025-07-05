@@ -502,3 +502,64 @@ body {
 .fp-section:last-child {
   background: inherit !important;
 }
+
+/* Remove any existing body padding */
+body {
+  padding-top: 0 !important;
+}
+
+/* Page backgrounds fill entire viewport */
+.page-background {
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+/* Content container that respects navbar height */
+.page-content {
+  position: relative;
+  z-index: 10;
+  padding-top: 100px; /* Space for navbar + breathing room */
+  min-height: 100vh;
+}
+
+/* Landing page exception - content can start from top */
+.landing-content {
+  position: relative;
+  z-index: 10;
+  padding-top: 0;
+  min-height: 100vh;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .page-content {
+    padding-top: 90px;
+  }
+}
+
+/* Ensure navbar stays on top */
+nav {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 50 !important;
+}
+
+/* Add top padding to page content areas */
+.page-content-spacing {
+  padding-top: 150px; /* Space for navbar + breathing room */
+}
+
+/* Landing page - no spacing needed */
+.landing-page {
+  padding-top: 0;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .page-content-spacing {
+    padding-top: 90px;
+  }
+}

@@ -225,7 +225,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-apple-mesh pt-20">
+    <div className="min-h-screen bg-apple-mesh">
       {/* Floating Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {[...Array(8)].map((_, i) => (
@@ -252,7 +252,7 @@ export default function RegisterPage() {
         ))}
       </div>
 
-      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
+      <div className="page-content-spacing relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
         <AnimatePresence mode="wait">
           {step === 1 ? (
             <motion.div

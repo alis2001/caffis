@@ -431,7 +431,7 @@ export default function VoiceOnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-apple-mesh pt-20">
+    <div className="min-h-screen bg-apple-mesh">
       {/* Floating Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {[...Array(6)].map((_, i) => (
@@ -458,7 +458,7 @@ export default function VoiceOnboardingPage() {
         ))}
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
+      <div className="page-content-spacing relative z-10 max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -176,7 +176,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-apple-mesh pt-20">
+    <div className="min-h-screen bg-apple-mesh">
       {/* Floating Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {[...Array(8)].map((_, i) => (
