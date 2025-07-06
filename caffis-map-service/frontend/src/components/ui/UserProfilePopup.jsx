@@ -1,397 +1,390 @@
 // caffis-map-service/frontend/src/components/ui/UserProfilePopup.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Coffee, 
-  MessageCircle, 
-  MapPin, 
-  Clock, 
-  Send,
-  Heart,
-  Star,
-  Users,
-  Zap,
-  Target
-} from 'lucide-react';
+import { X, Coffee, MessageCircle, MapPin, Clock, Star } from 'lucide-react';
 
 const UserProfilePopup = ({ 
   user, 
+  isVisible, 
   onClose, 
   onSendInvite, 
-  coffeeShops = [] 
+  onSendMessage,
+  position = { x: 0, y: 0 }
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
-  const [selectedCoffeeShop, setSelectedCoffeeShop] = useState('');
   const [showInviteForm, setShowInviteForm] = useState(false);
-  const [isSending, setIsSending] = useState(false);
 
-  // Get user initials
-  const getInitials = () => {
-    if (user.profile?.firstName && user.profile?.lastName) {
-      return `${user.profile.firstName[0]}${user.profile.lastName[0]}`.toUpperCase();
-    }
-    return user.userId?.slice(-2).toUpperCase() || 'U';
-  };
+  if (!user) return null;
 
-  // Get preference display info
-  const getPreferenceIcon = (type, value) => {
-    const icons = {
-      coffeePersonality: {
-        quick: { icon: '⚡', color: 'text-orange-500', label: 'Veloce' },
-        balanced: { icon: '⚖️', color: 'text-blue-500', label: 'Equilibrato' },
-        slow: { icon: '🧘', color: 'text-green-500', label: 'Rilassato' }
-      },
-      socialEnergy: {
-        introvert: { icon: '🤫', color: 'text-purple-500', label: 'Introverso' },
-        ambivert: { icon: '😊', color: 'text-blue-500', label: 'Equilibrato' },
-        extrovert: { icon: '🎉', color: 'text-pink-500', label: 'Estroverso' }
-      },
-      groupPreference: {
-        one_on_one: { icon: '👥', color: 'text-indigo-500', label: 'Uno-a-uno' },
-        small_group: { icon: '👪', color: 'text-green-500', label: 'Piccolo gruppo' },
-        larger_group: { icon: '🎊', color: 'text-red-500', label: 'Gruppo grande' }
-      }
-    };
-
-    return icons[type]?.[value] || { icon: '❓', color: 'text-gray-500', label: value };
-  };
-
-  // Handle invite sending
   const handleSendInvite = async () => {
-    if (!inviteMessage.trim()) {
-      setInviteMessage('Ciao! Ti andrebbe di prendere un caffè insieme? ☕');
-    }
-
-    setIsSending(true);
-    
+    setIsLoading(true);
     try {
-      await onSendInvite(inviteMessage, selectedCoffeeShop);
+      await onSendInvite({
+        toUserId: user.userId,
+        message: inviteMessage || 'Would you like to grab a coffee?',
+        timestamp: new Date().toISOString()
+      });
       setShowInviteForm(false);
-      // Could show success animation here
+      setInviteMessage('');
+      onClose();
     } catch (error) {
-      console.error('Failed to send invite:', error);
-      // Could show error message here
+      console.error('Error sending invite:', error);
     } finally {
-      setIsSending(false);
+      setIsLoading(false);
     }
   };
 
-  // Calculate compatibility score (mock)
-  const getCompatibilityScore = () => {
-    return Math.floor(Math.random() * 20) + 80; // 80-100%
+  const handleSendMessage = () => {
+    if (onSendMessage) {
+      onSendMessage(user.userId);
+    }
   };
 
-  const compatibilityScore = getCompatibilityScore();
+  const formatLastSeen = (timestamp) => {
+    if (!timestamp) return 'Unknown';
+    
+    const now = new Date();
+    const lastSeen = new Date(timestamp);
+    const diffMinutes = Math.floor((now - lastSeen) / (1000 * 60));
+    
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
+    return `${Math.floor(diffMinutes / 1440)}d ago`;
+  };
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 w-full max-w-md overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="relative bg-gradient-to-br from-purple-500/20 to-pink-500/20 p-6">
-            <motion.button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <X size={20} />
-            </motion.button>
+      {isVisible && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="popup-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+              zIndex: 9998,
+              cursor: 'pointer'
+            }}
+          />
 
-            {/* Profile Photo/Avatar */}
-            <div className="flex flex-col items-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
-                className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl shadow-lg border-4 border-white mb-4"
+          {/* Popup */}
+          <motion.div
+            className="user-profile-popup"
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ type: "spring", duration: 0.3 }}
+            style={{
+              position: 'fixed',
+              left: Math.min(position.x, window.innerWidth - 320),
+              top: Math.min(position.y, window.innerHeight - 400),
+              width: 300,
+              maxHeight: 380,
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+              zIndex: 9999,
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '16px',
+              borderBottom: '1px solid #E5E7EB',
+              position: 'relative'
+            }}>
+              <button
+                onClick={onClose}
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  color: '#6B7280'
+                }}
               >
-                {user.profile?.profilePic ? (
-                  <img 
-                    src={user.profile.profilePic} 
-                    alt="Profile"
-                    className="w-full h-full object-cover rounded-full"
+                <X size={20} />
+              </button>
+
+              {/* User Info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {user.profile?.avatar ? (
+                  <img
+                    src={user.profile.avatar}
+                    alt={user.profile?.name || 'User'}
+                    style={{
+                      width: '50px',
+                      height: '50px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid #E5E7EB'
+                    }}
                   />
                 ) : (
-                  getInitials()
+                  <div style={{
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '50%',
+                    backgroundColor: '#4F46E5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '20px',
+                    fontWeight: 'bold'
+                  }}>
+                    {user.profile?.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
                 )}
-              </motion.div>
 
-              {/* Name and Username */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-center"
-              >
-                <h2 className="text-xl font-bold text-gray-900">
-                  {user.profile?.firstName || 'Utente'} {user.profile?.lastName || ''}
-                </h2>
-                <p className="text-gray-600 text-sm">
-                  @{user.profile?.username || `user${user.userId?.slice(-4)}`}
-                </p>
-              </motion.div>
-
-              {/* Compatibility Score */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4, type: "spring" }}
-                className="mt-3 bg-white/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/40"
-              >
-                <div className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-500" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    {compatibilityScore}% compatibilità
-                  </span>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
-                        size={12} 
-                        className={i < Math.floor(compatibilityScore / 20) ? 'text-yellow-400 fill-current' : 'text-gray-300'} 
-                      />
-                    ))}
+                <div style={{ flex: 1 }}>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#111827'
+                  }}>
+                    {user.profile?.name || 'Anonymous User'}
+                  </h3>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    marginTop: '4px',
+                    color: user.isAvailable ? '#10B981' : '#6B7280',
+                    fontSize: '14px'
+                  }}>
+                    <div style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: user.isAvailable ? '#10B981' : '#6B7280'
+                    }} />
+                    {user.isAvailable ? 'Available for coffee' : 'Not available'}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </div>
-          </div>
 
-          {/* Content */}
-          <div className="p-6 space-y-6">
-            {/* Distance */}
-            {user.distance && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-                className="flex items-center gap-3 text-sm"
-              >
-                <MapPin className="w-4 h-4 text-blue-500" />
-                <span className="text-gray-600">
-                  Distanza: <span className="font-semibold text-gray-900">
-                    {user.distance < 1000 
-                      ? `${Math.round(user.distance)}m`
-                      : `${(user.distance / 1000).toFixed(1)}km`
+            {/* Content */}
+            <div style={{ padding: '16px' }}>
+              {/* User Stats */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px',
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '8px',
+                  backgroundColor: '#F9FAFB',
+                  borderRadius: '8px'
+                }}>
+                  <MapPin size={16} style={{ color: '#6B7280', marginBottom: '4px' }} />
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Distance</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    {user.distance !== undefined 
+                      ? user.distance < 1000 
+                        ? `${Math.round(user.distance)}m`
+                        : `${(user.distance / 1000).toFixed(1)}km`
+                      : 'Unknown'
                     }
-                  </span>
-                </span>
-              </motion.div>
-            )}
-
-            {/* Preferences */}
-            {user.profile?.preferences && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="space-y-3"
-              >
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  Preferenze
-                </h3>
-                
-                <div className="grid gap-3">
-                  {Object.entries(user.profile.preferences).map(([key, value], index) => {
-                    const pref = getPreferenceIcon(key, value);
-                    return (
-                      <motion.div
-                        key={key}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.7 + index * 0.1 }}
-                        className="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-md rounded-xl border border-white/40"
-                      >
-                        <span className="text-lg">{pref.icon}</span>
-                        <div>
-                          <p className={`font-medium ${pref.color}`}>{pref.label}</p>
-                          <p className="text-xs text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Actions */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-              className="flex gap-3"
-            >
-              <motion.button
-                onClick={() => setShowInviteForm(true)}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all relative overflow-hidden group"
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {/* Shimmer Effect */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100"
-                  animate={{
-                    x: ["-100%", "100%"],
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  style={{ width: "50%" }}
-                />
-                
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <Coffee size={18} />
-                  Invita per un caffè
-                </span>
-              </motion.button>
-
-              <motion.button
-                className="p-3 bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl hover:bg-white/80 transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <MessageCircle size={20} className="text-gray-600" />
-              </motion.button>
-            </motion.div>
-          </div>
-
-          {/* Invite Form Modal */}
-          <AnimatePresence>
-            {showInviteForm && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-              >
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 w-full max-w-sm p-6"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-lg">Invia Invito</h3>
-                    <motion.button
-                      onClick={() => setShowInviteForm(false)}
-                      className="p-1 hover:bg-gray-100 rounded"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <X size={16} />
-                    </motion.button>
                   </div>
+                </div>
 
-                  {/* Coffee Shop Selection */}
-                  {coffeeShops.length > 0 && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Scegli un caffè (opzionale)
-                      </label>
-                      <select
-                        value={selectedCoffeeShop}
-                        onChange={(e) => setSelectedCoffeeShop(e.target.value)}
-                        className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/80 backdrop-blur-md"
-                      >
-                        <option value="">Nessuna preferenza</option>
-                        {coffeeShops.map(shop => (
-                          <option key={shop.id} value={shop.id}>
-                            {shop.name} - {shop.rating ? `⭐ ${shop.rating}` : ''} {shop.priceRange}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '8px',
+                  backgroundColor: '#F9FAFB',
+                  borderRadius: '8px'
+                }}>
+                  <Clock size={16} style={{ color: '#6B7280', marginBottom: '4px' }} />
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>Last seen</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    {formatLastSeen(user.timestamp)}
+                  </div>
+                </div>
+              </div>
+
+              {/* User Bio/Interests */}
+              {user.profile?.bio && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#F9FAFB',
+                  borderRadius: '8px',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
+                    About
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#111827' }}>
+                    {user.profile.bio}
+                  </div>
+                </div>
+              )}
+
+              {/* Coffee Preferences */}
+              {user.profile?.coffeePreferences && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: '8px',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#92400E', marginBottom: '4px' }}>
+                    Coffee Preferences
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#92400E' }}>
+                    {user.profile.coffeePreferences}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {user.isAvailable && (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowInviteForm(true)}
+                    disabled={isLoading}
+                    style={{
+                      flex: 1,
+                      padding: '10px 16px',
+                      backgroundColor: '#4F46E5',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Coffee size={16} />
+                    Invite for Coffee
+                  </motion.button>
+
+                  {onSendMessage && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleSendMessage}
+                      style={{
+                        padding: '10px',
+                        backgroundColor: '#10B981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <MessageCircle size={16} />
+                    </motion.button>
                   )}
+                </div>
+              )}
+            </div>
 
-                  {/* Message Input */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Messaggio
+            {/* Invite Form */}
+            <AnimatePresence>
+              {showInviteForm && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{
+                    borderTop: '1px solid #E5E7EB',
+                    padding: '16px'
+                  }}
+                >
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#111827',
+                      marginBottom: '4px'
+                    }}>
+                      Invite Message
                     </label>
                     <textarea
                       value={inviteMessage}
                       onChange={(e) => setInviteMessage(e.target.value)}
-                      placeholder="Ciao! Ti andrebbe di prendere un caffè insieme? ☕"
-                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none bg-white/80 backdrop-blur-md"
+                      placeholder="Would you like to grab a coffee?"
                       rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #D1D5DB',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        resize: 'none',
+                        outline: 'none'
+                      }}
                     />
                   </div>
 
-                  {/* Proposed Time */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock size={16} />
-                      <span>Proposto per: Tra 30 minuti</span>
-                    </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setShowInviteForm(false)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 16px',
+                        backgroundColor: '#F3F4F6',
+                        color: '#6B7280',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSendInvite}
+                      disabled={isLoading}
+                      style={{
+                        flex: 1,
+                        padding: '8px 16px',
+                        backgroundColor: '#4F46E5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        opacity: isLoading ? 0.7 : 1
+                      }}
+                    >
+                      {isLoading ? 'Sending...' : 'Send Invite'}
+                    </button>
                   </div>
-
-                  {/* Send Button */}
-                  <motion.button
-                    onClick={handleSendInvite}
-                    disabled={isSending}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
-                    whileHover={!isSending ? { scale: 1.02 } : {}}
-                    whileTap={!isSending ? { scale: 0.98 } : {}}
-                  >
-                    {/* Shimmer Effect */}
-                    {!isSending && (
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100"
-                        animate={{
-                          x: ["-100%", "100%"],
-                        }}
-                        transition={{
-                          duration: 1.5,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                        style={{ width: "50%" }}
-                      />
-                    )}
-                    
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      {isSending ? (
-                        <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          >
-                            <Zap size={18} />
-                          </motion.div>
-                          Invio in corso...
-                        </>
-                      ) : (
-                        <>
-                          <Send size={18} />
-                          Invia Invito
-                        </>
-                      )}
-                    </span>
-                  </motion.button>
                 </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </>
+      )}
     </AnimatePresence>
   );
 };

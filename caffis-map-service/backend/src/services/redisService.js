@@ -1,5 +1,5 @@
 // caffis-map-service/backend/src/services/redisService.js
-const redis = require('redis');
+const Redis = require('redis');
 const logger = require('../utils/logger');
 
 class RedisService {
@@ -8,34 +8,40 @@ class RedisService {
     this.isConnected = false;
   }
 
+  // ============================================
+  // CONNECTION MANAGEMENT
+  // ============================================
+
   async connect() {
     try {
-      this.client = redis.createClient({
-        url: process.env.REDIS_URL || 'redis://localhost:6379',
+      const redisConfig = {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
         password: process.env.REDIS_PASSWORD || undefined,
-        socket: {
-          connectTimeout: 60000,
-          lazyConnect: true,
-          reconnectStrategy: (retries) => Math.min(retries * 50, 500)
-        }
-      });
+        retryDelayOnFailover: 100,
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+      };
 
-      this.client.on('error', (err) => {
-        logger.error('Redis Client Error:', err);
-        this.isConnected = false;
-      });
+      this.client = Redis.createClient(redisConfig);
 
+      // Event listeners
       this.client.on('connect', () => {
-        logger.info('✅ Redis client connected');
-        this.isConnected = true;
+        logger.info('🔌 Connecting to Redis...');
       });
 
       this.client.on('ready', () => {
-        logger.info('✅ Redis client ready');
+        logger.info('✅ Redis connected and ready');
+        this.isConnected = true;
+      });
+
+      this.client.on('error', (err) => {
+        logger.error('❌ Redis connection error:', err);
+        this.isConnected = false;
       });
 
       this.client.on('end', () => {
-        logger.info('❌ Redis client disconnected');
+        logger.warn('🔌 Redis connection closed');
         this.isConnected = false;
       });
 
@@ -47,159 +53,122 @@ class RedisService {
     }
   }
 
-  disconnect() {
+  async disconnect() {
     if (this.client) {
-      this.client.quit();
+      await this.client.quit();
       this.isConnected = false;
-      logger.info('✅ Redis connection closed gracefully');
+      logger.info('🔌 Redis disconnected');
     }
   }
 
   // ============================================
-  // USER LOCATION METHODS
+  // LOCATION OPERATIONS
   // ============================================
 
-  async setUserLocation(userId, latitude, longitude, city) {
-    const locationData = {
-      userId,
-      latitude,
-      longitude,
-      city,
-      timestamp: Date.now(),
-      isAvailable: true
-    };
-
+  async setUserLocation(userId, locationData) {
     try {
-      // Store user location with 5 minute TTL
-      await this.client.setEx(
-        `location:${userId}`, 
-        300, // 5 minutes TTL
-        JSON.stringify(locationData)
-      );
+      const key = `location:${userId}`;
+      const data = {
+        ...locationData,
+        timestamp: Date.now(),
+        userId
+      };
 
-      // Add user to city set with 5 minute TTL
-      await this.client.setEx(`city:${city}:user:${userId}`, 300, '1');
-      
-      // Update city users list
-      await this.client.sAdd(`city:${city}:users`, userId);
-      await this.client.expire(`city:${city}:users`, 300);
-
-      logger.info(`📍 Location updated for user ${userId} in ${city}`);
+      await this.client.setEx(key, 300, JSON.stringify(data)); // 5 min TTL
+      logger.info(`📍 Location saved for user ${userId}`);
       return true;
     } catch (error) {
-      logger.error('Error setting user location:', error);
+      logger.error('Error saving user location:', error);
       throw error;
     }
   }
 
   async getUserLocation(userId) {
     try {
-      const locationStr = await this.client.get(`location:${userId}`);
-      return locationStr ? JSON.parse(locationStr) : null;
+      const key = `location:${userId}`;
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
     } catch (error) {
       logger.error('Error getting user location:', error);
       return null;
     }
   }
 
-  async getUsersInCity(city, excludeUserId = null) {
+  async removeUserLocation(userId) {
     try {
-      const userIds = await this.client.sMembers(`city:${city}:users`);
-      const users = [];
+      const key = `location:${userId}`;
+      await this.client.del(key);
+      logger.info(`🗑️ Location removed for user ${userId}`);
+    } catch (error) {
+      logger.error('Error removing user location:', error);
+    }
+  }
 
+  // ============================================
+  // CITY-BASED USER GROUPS
+  // ============================================
+
+  async addUserToCity(userId, cityName) {
+    try {
+      const key = `city:${cityName.toLowerCase()}`;
+      await this.client.sAdd(key, userId);
+      await this.client.expire(key, 300); // 5 min TTL
+      logger.info(`🏙️ User ${userId} added to city ${cityName}`);
+    } catch (error) {
+      logger.error('Error adding user to city:', error);
+    }
+  }
+
+  async removeUserFromCity(userId, cityName) {
+    try {
+      const key = `city:${cityName.toLowerCase()}`;
+      await this.client.sRem(key, userId);
+      logger.info(`🏙️ User ${userId} removed from city ${cityName}`);
+    } catch (error) {
+      logger.error('Error removing user from city:', error);
+    }
+  }
+
+  async getUsersInCity(cityName) {
+    try {
+      const key = `city:${cityName.toLowerCase()}`;
+      const userIds = await this.client.sMembers(key);
+      
+      // Get all user locations
+      const locations = [];
       for (const userId of userIds) {
-        if (excludeUserId && userId === excludeUserId) continue;
-        
-        const locationData = await this.getUserLocation(userId);
-        if (locationData && locationData.isAvailable) {
-          // Get user profile from main app (you'll implement this)
-          const userProfile = await this.getUserProfile(userId);
-          users.push({
-            ...locationData,
-            profile: userProfile
-          });
+        const location = await this.getUserLocation(userId);
+        if (location) {
+          locations.push(location);
         }
       }
 
-      return users;
+      return locations;
     } catch (error) {
       logger.error('Error getting users in city:', error);
       return [];
     }
   }
 
-  async removeUserLocation(userId) {
+  // ============================================
+  // COFFEE SHOP OPERATIONS
+  // ============================================
+
+  async setCoffeeShops(cityName, shopsData) {
     try {
-      const locationData = await this.getUserLocation(userId);
-      
-      if (locationData && locationData.city) {
-        // Remove from city sets
-        await this.client.sRem(`city:${locationData.city}:users`, userId);
-        await this.client.del(`city:${locationData.city}:user:${userId}`);
-      }
-
-      // Remove user location
-      await this.client.del(`location:${userId}`);
-      
-      logger.info(`📍 Location removed for user ${userId}`);
-      return true;
-    } catch (error) {
-      logger.error('Error removing user location:', error);
-      throw error;
-    }
-  }
-
-  // ============================================
-  // USER AVAILABILITY METHODS
-  // ============================================
-
-  async setUserAvailability(userId, isAvailable) {
-    try {
-      const locationData = await this.getUserLocation(userId);
-      if (locationData) {
-        locationData.isAvailable = isAvailable;
-        locationData.timestamp = Date.now();
-        
-        await this.client.setEx(
-          `location:${userId}`, 
-          300, 
-          JSON.stringify(locationData)
-        );
-        
-        logger.info(`🔄 Availability updated for user ${userId}: ${isAvailable}`);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      logger.error('Error setting user availability:', error);
-      throw error;
-    }
-  }
-
-  // ============================================
-  // COFFEE SHOP METHODS
-  // ============================================
-
-  async setCoffeeShops(city, coffeeShops) {
-    try {
-      await this.client.setEx(
-        `coffee_shops:${city}`, 
-        3600, // 1 hour TTL
-        JSON.stringify(coffeeShops)
-      );
-      
-      logger.info(`☕ Coffee shops cached for ${city}: ${coffeeShops.length} shops`);
-      return true;
+      const key = `coffee_shops:${cityName.toLowerCase()}`;
+      await this.client.setEx(key, 3600, JSON.stringify(shopsData)); // 1 hour TTL
+      logger.info(`☕ Coffee shops cached for ${cityName}`);
     } catch (error) {
       logger.error('Error caching coffee shops:', error);
-      throw error;
     }
   }
 
-  async getCoffeeShops(city) {
+  async getCoffeeShops(cityName) {
     try {
-      const shopsStr = await this.client.get(`coffee_shops:${city}`);
-      return shopsStr ? JSON.parse(shopsStr) : null;
+      const key = `coffee_shops:${cityName.toLowerCase()}`;
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
     } catch (error) {
       logger.error('Error getting coffee shops:', error);
       return null;
@@ -207,149 +176,61 @@ class RedisService {
   }
 
   // ============================================
-  // CACHE METHODS
+  // USER PROFILE CACHE
   // ============================================
 
-  async cacheUserProfile(userId, profileData) {
+  async setUserProfile(userId, profileData) {
     try {
-      await this.client.setEx(
-        `user_profile:${userId}`, 
-        1800, // 30 minutes TTL
-        JSON.stringify(profileData)
-      );
-      return true;
+      const key = `user_profile:${userId}`;
+      await this.client.setEx(key, 1800, JSON.stringify(profileData)); // 30 min TTL
+      logger.info(`👤 Profile cached for user ${userId}`);
     } catch (error) {
       logger.error('Error caching user profile:', error);
-      throw error;
     }
   }
 
   async getUserProfile(userId) {
     try {
-      // First check cache
-      const cachedProfile = await this.client.get(`user_profile:${userId}`);
-      if (cachedProfile) {
-        return JSON.parse(cachedProfile);
-      }
-
-      // If not in cache, fetch from main app API
-      const profileData = await this.fetchUserProfileFromMainApp(userId);
-      if (profileData) {
-        await this.cacheUserProfile(userId, profileData);
-        return profileData;
-      }
-
-      return null;
+      const key = `user_profile:${userId}`;
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
     } catch (error) {
       logger.error('Error getting user profile:', error);
       return null;
     }
   }
 
-  async fetchUserProfileFromMainApp(userId) {
+  // ============================================
+  // UTILITY METHODS
+  // ============================================
+
+  async getConnectionStatus() {
+    return {
+      connected: this.isConnected,
+      client: !!this.client
+    };
+  }
+
+  async flushAll() {
     try {
-      // This will make API call to main app to get user profile
-      // For now, return mock data - you'll implement this later
-      return {
-        id: userId,
-        firstName: 'User',
-        lastName: userId.slice(-2).toUpperCase(),
-        username: `user${userId}`,
-        profilePic: null,
-        preferences: {
-          coffeePersonality: 'balanced',
-          socialEnergy: 'ambivert'
-        }
-      };
+      await this.client.flushAll();
+      logger.info('🧹 Redis cache cleared');
     } catch (error) {
-      logger.error('Error fetching user profile from main app:', error);
-      return null;
+      logger.error('Error clearing cache:', error);
     }
   }
 
-  // ============================================
-  // INVITE METHODS
-  // ============================================
-
-  async storeInvite(inviteData) {
+  async getKeys(pattern = '*') {
     try {
-      const inviteId = `invite:${Date.now()}:${inviteData.fromUserId}`;
-      await this.client.setEx(
-        inviteId,
-        1800, // 30 minutes TTL
-        JSON.stringify(inviteData)
-      );
-
-      // Add to user's pending invites
-      await this.client.sAdd(`user:${inviteData.toUserId}:pending_invites`, inviteId);
-      await this.client.expire(`user:${inviteData.toUserId}:pending_invites`, 1800);
-
-      return inviteId;
+      return await this.client.keys(pattern);
     } catch (error) {
-      logger.error('Error storing invite:', error);
-      throw error;
-    }
-  }
-
-  async getUserPendingInvites(userId) {
-    try {
-      const inviteIds = await this.client.sMembers(`user:${userId}:pending_invites`);
-      const invites = [];
-
-      for (const inviteId of inviteIds) {
-        const inviteStr = await this.client.get(inviteId);
-        if (inviteStr) {
-          invites.push(JSON.parse(inviteStr));
-        }
-      }
-
-      return invites;
-    } catch (error) {
-      logger.error('Error getting pending invites:', error);
+      logger.error('Error getting keys:', error);
       return [];
-    }
-  }
-
-  // ============================================
-  // STATISTICS METHODS
-  // ============================================
-
-  async getMapStatistics() {
-    try {
-      const stats = {
-        totalActiveUsers: 0,
-        usersByCity: {},
-        totalCoffeeShops: 0
-      };
-
-      // Get all location keys
-      const locationKeys = await this.client.keys('location:*');
-      stats.totalActiveUsers = locationKeys.length;
-
-      // Count users by city
-      const cityKeys = await this.client.keys('city:*:users');
-      for (const cityKey of cityKeys) {
-        const city = cityKey.split(':')[1];
-        const userCount = await this.client.sCard(cityKey);
-        stats.usersByCity[city] = userCount;
-      }
-
-      // Count coffee shops
-      const shopKeys = await this.client.keys('coffee_shops:*');
-      for (const shopKey of shopKeys) {
-        const shopsStr = await this.client.get(shopKey);
-        if (shopsStr) {
-          const shops = JSON.parse(shopsStr);
-          stats.totalCoffeeShops += shops.length;
-        }
-      }
-
-      return stats;
-    } catch (error) {
-      logger.error('Error getting map statistics:', error);
-      return { totalActiveUsers: 0, usersByCity: {}, totalCoffeeShops: 0 };
     }
   }
 }
 
-module.exports = new RedisService();
+// Create singleton instance
+const redisService = new RedisService();
+
+module.exports = redisService;

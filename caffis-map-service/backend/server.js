@@ -12,6 +12,7 @@ require('dotenv').config();
 const redisService = require('./src/services/redisService');
 const socketService = require('./src/services/socketService');
 const logger = require('./src/utils/logger');
+const authMiddleware = require('./src/middleware/authMiddleware');
 
 // Import routes
 const mapRoutes = require('./src/routes/mapRoutes');
@@ -58,9 +59,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// Routes (health routes don't need auth)
 app.use('/health', healthRoutes);
-app.use('/api/map', mapRoutes);
+
+// Map routes with authentication middleware
+app.use('/api/map', mapRoutes); // mapRoutes already includes auth middleware
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -90,6 +93,7 @@ async function initializeServices() {
     server.listen(PORT, () => {
       logger.info(`🚀 Map Service running on port ${PORT}`);
       logger.info(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
     });
 
   } catch (error) {
@@ -99,8 +103,8 @@ async function initializeServices() {
 }
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('🛑 SIGTERM received, shutting down gracefully');
+const gracefulShutdown = async (signal) => {
+  logger.info(`🛑 ${signal} received, shutting down gracefully`);
   
   server.close(() => {
     logger.info('🔌 HTTP server closed');
@@ -110,19 +114,20 @@ process.on('SIGTERM', async () => {
   logger.info('📦 Redis disconnected');
   
   process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
 });
 
-process.on('SIGINT', async () => {
-  logger.info('🛑 SIGINT received, shutting down gracefully');
-  
-  server.close(() => {
-    logger.info('🔌 HTTP server closed');
-  });
-  
-  await redisService.disconnect();
-  logger.info('📦 Redis disconnected');
-  
-  process.exit(0);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
 // Initialize and start

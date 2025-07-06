@@ -1,195 +1,222 @@
 // caffis-map-service/frontend/src/components/ui/AvailabilityToggle.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Coffee, MapPin, Users, Loader } from 'lucide-react';
+import { Coffee, Clock, Users } from 'lucide-react';
 
 const AvailabilityToggle = ({ 
   isAvailable, 
   onToggle, 
-  isLoading = false, 
-  disabled = false 
+  isLoading = false,
+  nearbyUsersCount = 0,
+  className = ""
 }) => {
-  
-  const handleClick = () => {
-    if (!disabled && !isLoading) {
-      onToggle();
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleToggle = () => {
+    if (!isLoading) {
+      onToggle(!isAvailable);
     }
   };
 
   return (
-    <div className="w-full">
-      {/* Main Toggle Button */}
+    <div className={`availability-toggle ${className}`}>
+      {/* Toggle Button */}
       <motion.button
-        onClick={handleClick}
-        disabled={disabled || isLoading}
-        className={`w-full px-6 py-4 rounded-2xl font-semibold text-sm transition-all duration-500 relative overflow-hidden group ${
-          disabled 
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : isAvailable
-              ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg hover:shadow-xl'
-              : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl'
-        }`}
-        whileHover={!disabled ? { scale: 1.02, y: -2 } : {}}
-        whileTap={!disabled ? { scale: 0.98 } : {}}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        onClick={handleToggle}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+        disabled={isLoading}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '12px 16px',
+          backgroundColor: isAvailable ? '#10B981' : '#6B7280',
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px',
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          fontSize: '14px',
+          fontWeight: '600',
+          transition: 'all 0.2s ease',
+          opacity: isLoading ? 0.7 : 1,
+          minWidth: '200px',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
       >
-        {/* Liquid Glass Effect */}
-        {!disabled && (
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-0 group-hover:opacity-100"
-            initial={{ x: "-100%" }}
-            whileHover={{ x: "100%" }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
-          />
-        )}
+        {/* Background Animation */}
+        <motion.div
+          animate={{
+            scale: isAvailable ? [1, 1.2, 1] : 1,
+            opacity: isAvailable ? [0.3, 0.6, 0.3] : 0
+          }}
+          transition={{
+            duration: 2,
+            repeat: isAvailable ? Infinity : 0,
+            repeatType: "loop"
+          }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px'
+          }}
+        />
 
-        {/* Shimmer Effect for Active State */}
-        {isAvailable && !disabled && (
+        {/* Icon */}
+        <motion.div
+          animate={{ rotate: isLoading ? 360 : 0 }}
+          transition={{ 
+            duration: 1, 
+            repeat: isLoading ? Infinity : 0,
+            ease: "linear"
+          }}
+        >
+          {isLoading ? (
+            <Clock size={18} />
+          ) : (
+            <Coffee size={18} />
+          )}
+        </motion.div>
+
+        {/* Text */}
+        <span style={{ position: 'relative', zIndex: 1 }}>
+          {isLoading ? 'Updating...' : 
+           isAvailable ? 'Available for Coffee' : 'Set Available'}
+        </span>
+
+        {/* Pulse Effect */}
+        {isAvailable && !isLoading && (
           <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
             animate={{
-              x: ["-100%", "100%"],
+              scale: [1, 1.5, 1],
+              opacity: [0.5, 0, 0.5]
             }}
             transition={{
               duration: 2,
               repeat: Infinity,
-              ease: "easeInOut",
+              repeatType: "loop"
             }}
-            style={{ width: "50%" }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '100%',
+              height: '100%',
+              backgroundColor: '#10B981',
+              borderRadius: '12px',
+              zIndex: 0
+            }}
           />
         )}
-
-        {/* Button Content */}
-        <div className="relative z-10 flex items-center justify-center gap-3">
-          {/* Icon with Animation */}
-          <motion.div
-            animate={
-              isLoading 
-                ? { rotate: 360 }
-                : isAvailable 
-                  ? { scale: [1, 1.2, 1] }
-                  : {}
-            }
-            transition={
-              isLoading 
-                ? { duration: 1, repeat: Infinity, ease: "linear" }
-                : { duration: 2, repeat: Infinity, ease: "easeInOut" }
-            }
-          >
-            {isLoading ? (
-              <Loader className="w-6 h-6" />
-            ) : isAvailable ? (
-              <Users className="w-6 h-6" />
-            ) : (
-              <Coffee className="w-6 h-6" />
-            )}
-          </motion.div>
-
-          {/* Text */}
-          <span className="font-bold text-base">
-            {isLoading 
-              ? "Localizzazione in corso..."
-              : isAvailable 
-                ? "Disponibile per un caffè!"
-                : "Pronto a connettersi!"
-            }
-          </span>
-
-          {/* Arrow Animation */}
-          {!isLoading && !disabled && (
-            <motion.div
-              animate={isAvailable ? { x: [0, 5, 0] } : { rotate: [0, 10, 0] }}
-              transition={{ 
-                duration: isAvailable ? 1.5 : 2, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
-              }}
-              className="text-xl"
-            >
-              {isAvailable ? "🌟" : "☕"}
-            </motion.div>
-          )}
-        </div>
-
-        {/* Glass Border Effect */}
-        <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-all duration-300" />
       </motion.button>
 
-      {/* Status Information */}
+      {/* Status Info */}
       <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ 
-          opacity: isAvailable || isLoading ? 1 : 0, 
-          height: isAvailable || isLoading ? "auto" : 0 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          marginTop: '8px',
+          textAlign: 'center'
         }}
-        transition={{ duration: 0.3 }}
-        className="mt-3 px-4 py-3 bg-white/50 backdrop-blur-md rounded-xl border border-white/20"
       >
-        {isLoading && (
-          <div className="flex items-center gap-3 text-sm text-gray-600">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              <MapPin className="w-4 h-4 text-blue-500" />
-            </motion.div>
-            <span>Rilevamento posizione GPS...</span>
-          </div>
-        )}
+        {/* Availability Status */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          fontSize: '12px',
+          color: '#6B7280',
+          marginBottom: '4px'
+        }}>
+          <div style={{
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            backgroundColor: isAvailable ? '#10B981' : '#6B7280'
+          }} />
+          <span>
+            {isAvailable ? 'You are visible to others' : 'You are not visible'}
+          </span>
+        </div>
 
-        {isAvailable && !isLoading && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-green-700">
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="w-2 h-2 bg-green-500 rounded-full"
-              />
-              <span className="font-medium">Sei visibile agli altri utenti</span>
-            </div>
-            
-            <div className="text-xs text-gray-600 space-y-1">
-              <div className="flex items-center gap-2">
-                <Coffee className="w-3 h-3" />
-                <span>Altri utenti possono invitarti per un caffè</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-3 h-3" />
-                <span>La tua posizione è condivisa in tempo reale</span>
-              </div>
-            </div>
-          </div>
+        {/* Nearby Users Count */}
+        {nearbyUsersCount > 0 && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              color: '#4F46E5',
+              backgroundColor: '#EEF2FF',
+              padding: '4px 8px',
+              borderRadius: '8px',
+              margin: '0 auto',
+              width: 'fit-content'
+            }}
+          >
+            <Users size={12} />
+            <span>
+              {nearbyUsersCount} {nearbyUsersCount === 1 ? 'person' : 'people'} nearby
+            </span>
+          </motion.div>
         )}
       </motion.div>
 
-      {/* Privacy Notice */}
-      {!isAvailable && !isLoading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-3 text-xs text-gray-500 text-center"
-        >
-          🔒 La tua posizione rimane privata fino all'attivazione
-        </motion.div>
-      )}
-
-      {/* Quick Tips */}
-      {isAvailable && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100"
-        >
-          <div className="text-xs text-blue-700 space-y-1">
-            <div className="font-medium mb-1">💡 Suggerimenti:</div>
-            <div>• Tocca i marker sulla mappa per vedere i profili</div>
-            <div>• Trova caffè nelle vicinanze</div>
-            <div>• Invia inviti per organizzare incontri</div>
-          </div>
-        </motion.div>
-      )}
+      {/* Tooltip */}
+      <motion.div
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ 
+          opacity: isHovered && !isLoading ? 1 : 0,
+          y: isHovered && !isLoading ? 0 : 5
+        }}
+        style={{
+          position: 'absolute',
+          top: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginTop: '8px',
+          padding: '8px 12px',
+          backgroundColor: '#1F2937',
+          color: 'white',
+          fontSize: '12px',
+          borderRadius: '8px',
+          whiteSpace: 'nowrap',
+          zIndex: 1000,
+          pointerEvents: 'none'
+        }}
+      >
+        {isAvailable 
+          ? 'Click to become unavailable for coffee meetups'
+          : 'Click to let others know you\'re available for coffee'
+        }
+        
+        {/* Tooltip Arrow */}
+        <div style={{
+          position: 'absolute',
+          top: '-4px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 0,
+          height: 0,
+          borderLeft: '4px solid transparent',
+          borderRight: '4px solid transparent',
+          borderBottom: '4px solid #1F2937'
+        }} />
+      </motion.div>
     </div>
   );
 };
