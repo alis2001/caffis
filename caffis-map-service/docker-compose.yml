@@ -1,13 +1,93 @@
-# caffis-map-service/docker-compose.yml
+# caffis-platform/docker-compose.yml
+# Complete orchestration for the entire Caffis platform
 version: '3.8'
 
 services:
-  # ============================================
-  # MAP SERVICE BACKEND
-  # ============================================
+  # ================================
+  # MAIN APPLICATION SERVICES
+  # ================================
+  
+  # Main App Frontend (Next.js)
+  main-frontend:
+    build:
+      context: ./caffis-main-app/client
+      dockerfile: Dockerfile
+    container_name: caffis-main-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_MAP_SERVICE_URL=http://localhost:5001
+      - NODE_ENV=development
+    volumes:
+      - ./caffis-main-app/client:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - main-backend
+    networks:
+      - frontend-network
+
+  # Main App Backend (Node.js + Express)
+  main-backend:
+    build:
+      context: ./caffis-main-app/server
+      dockerfile: Dockerfile
+    container_name: caffis-main-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@main-postgres:5432/caffis_main
+      - JWT_SECRET=${JWT_SECRET}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+    volumes:
+      - ./caffis-main-app/server:/app
+      - /app/node_modules
+    depends_on:
+      - main-postgres
+    networks:
+      - backend-network
+      - frontend-network
+
+  # PostgreSQL for Main App
+  main-postgres:
+    image: postgres:15-alpine
+    container_name: caffis-main-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=caffis_main
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - main_postgres_data:/var/lib/postgresql/data
+      - ./caffis-main-app/server/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d caffis_main"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ================================
+  # MAP SERVICE
+  # ================================
+  
+  # Map Service Backend
   map-backend:
     build:
-      context: ./backend
+      context: ./caffis-map-service/backend
       dockerfile: Dockerfile
     container_name: caffis-map-backend
     restart: unless-stopped
@@ -16,118 +96,147 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=5001
+      - REDIS_HOST=map-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
-      - REDIS_URL=redis://redis:6379
-      - MAIN_APP_API_URL=http://host.docker.internal:5000/api
-      - LOG_LEVEL=info
+      - FRONTEND_URL=http://localhost:3000
+      - MAIN_API_URL=http://main-backend:5000
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
     volumes:
-      - ./backend/logs:/app/logs
-      - ./backend/src:/app/src:ro  # Read-only for development
+      - ./caffis-map-service/backend:/app
+      - /app/node_modules
+      - map_logs:/app/logs
     depends_on:
-      redis:
-        condition: service_healthy
+      - map-redis
+      - main-backend
     networks:
-      - caffis-map-network
-      - caffis-shared-network
+      - map-network
+      - backend-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
 
-  # ============================================
-  # REDIS CACHE
-  # ============================================
-  redis:
+  # Map Service Frontend (Production)
+  map-frontend:
+    build:
+      context: ./caffis-map-service/frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: caffis-map-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    environment:
+      - REACT_APP_MAP_API_URL=http://localhost:5001
+      - REACT_APP_MAPBOX_TOKEN=${MAPBOX_ACCESS_TOKEN}
+    depends_on:
+      - map-backend
+    networks:
+      - map-network
+      - frontend-network
+    profiles:
+      - production
+
+  # Map Service Frontend (Development)
+  map-frontend-dev:
+    build:
+      context: ./caffis-map-service/frontend
+      dockerfile: Dockerfile.dev
+    container_name: caffis-map-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      - REACT_APP_MAP_API_URL=http://localhost:5001
+      - REACT_APP_MAPBOX_TOKEN=${MAPBOX_ACCESS_TOKEN}
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./caffis-map-service/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - map-backend
+    networks:
+      - map-network
+      - frontend-network
+    profiles:
+      - development
+
+  # Redis for Map Service
+  map-redis:
     image: redis:7-alpine
     container_name: caffis-map-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
-      - ./redis/redis.conf:/etc/redis/redis.conf:ro
-      - redis-data:/data
-    command: ["redis-server", "/etc/redis/redis.conf"]
+      - map_redis_data:/data
+      - ./caffis-map-service/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     networks:
-      - caffis-map-network
+      - map-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 30s
-
-  # ============================================
-  # MAP FRONTEND (Widget Development Server)
-  # ============================================
-  map-frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: caffis-map-frontend
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-    environment:
-      - REACT_APP_MAP_SERVICE_URL=http://localhost:5001
-      - REACT_APP_MAPBOX_TOKEN=${MAPBOX_ACCESS_TOKEN}
-      - CHOKIDAR_USEPOLLING=true
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - /app/node_modules
-    depends_on:
-      - map-backend
-    networks:
-      - caffis-map-network
-    command: ["npm", "start"]
-
-  # ============================================
-  # NGINX (Static Assets & Load Balancing)
-  # ============================================
-  nginx:
-    image: nginx:alpine
-    container_name: caffis-map-nginx
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./frontend/dist:/usr/share/nginx/html/map-widget:ro
-      - nginx-logs:/var/log/nginx
-    depends_on:
-      - map-backend
-      - map-frontend
-    networks:
-      - caffis-map-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-# ============================================
-# VOLUMES
-# ============================================
-volumes:
-  redis-data:
-    driver: local
-  nginx-logs:
-    driver: local
-
-# ============================================
-# NETWORKS
-# ============================================
-networks:
-  caffis-map-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+  # ================================
+  # LOAD BALANCER & PROXY
+  # ================================
   
-  # Shared network to communicate with main app
-  caffis-shared-network:
-    external: true
-    name: caffis-main-app_default
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: caffis-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - main-frontend
+      - main-backend
+      - map-backend
+    networks:
+      - frontend-network
+      - backend-network
+    profiles:
+      - production
+
+# ================================
+# NETWORKS
+# ================================
+networks:
+  frontend-network:
+    driver: bridge
+    name: caffis-frontend-network
+  backend-network:
+    driver: bridge
+    name: caffis-backend-network
+  map-network:
+    driver: bridge
+    name: caffis-map-network
+
+# ================================
+# VOLUMES
+# ================================
+volumes:
+  main_postgres_data:
+    driver: local
+    name: caffis-main-postgres-data
+  map_redis_data:
+    driver: local
+    name: caffis-map-redis-data
+  map_logs:
+    driver: local
+    name: caffis-map-logs
+  nginx_logs:
+    driver: local
+    name: caffis-nginx-logs
