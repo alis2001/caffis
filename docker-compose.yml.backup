@@ -78,6 +78,7 @@ services:
     depends_on:
       - map-redis
       - backend
+    restart: unless-stopped
 
   # Redis for Map Service
   map-redis:
@@ -97,6 +98,7 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: caffis-map-frontend-dev
+    restart: unless-stopped
     ports:
       - "3002:3001"
     environment:

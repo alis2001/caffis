@@ -1,4 +1,3 @@
-// caffis-map-service/backend/server.js
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -8,28 +7,10 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-// Import services and middleware
-const redisService = require('./src/services/redisService');
-const socketService = require('./src/services/socketService');
-const logger = require('./src/utils/logger');
-const authMiddleware = require('./src/middleware/authMiddleware');
-
-// Import routes
-const mapRoutes = require('./src/routes/mapRoutes');
-const healthRoutes = require('./src/routes/healthRoutes');
+console.log('🗺️ Starting Caffis Map Service...');
 
 const app = express();
 const server = http.createServer(app);
-
-// CORS configuration for Socket.IO
-const io = socketIo(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
-
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
@@ -39,7 +20,9 @@ app.use(compression());
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
@@ -55,15 +38,97 @@ app.use(express.urlencoded({ extended: true }));
 
 // Logging middleware
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path} - ${req.ip}`);
+  console.log(`🗺️ ${new Date().toISOString()} ${req.method} ${req.path} - ${req.ip}`);
   next();
 });
 
-// Routes (health routes don't need auth)
-app.use('/health', healthRoutes);
+// Try to load logger
+let logger;
+try {
+  logger = require('./src/utils/logger');
+  console.log('✅ Logger loaded successfully');
+} catch (error) {
+  console.error('❌ Logger failed to load:', error.message);
+  // Fallback logger
+  logger = {
+    info: console.log,
+    error: console.error,
+    warn: console.warn,
+    debug: console.log
+  };
+}
 
-// Map routes with authentication middleware
-app.use('/api/map', mapRoutes); // mapRoutes already includes auth middleware
+// Health check route (direct implementation)
+app.get('/health', (req, res) => {
+  logger.info('Health check requested');
+  res.json({
+    status: 'OK',
+    service: 'caffis-map-service',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Try to load health routes
+try {
+  const healthRoutes = require('./src/routes/healthRoutes');
+  app.use('/api/health', healthRoutes);
+  console.log('✅ Health routes loaded successfully');
+} catch (error) {
+  console.error('❌ Health routes failed to load:', error.message);
+}
+
+// Basic map API endpoint (direct implementation)
+app.get('/api/map/status', (req, res) => {
+  res.json({
+    message: 'Map service is operational',
+    timestamp: new Date().toISOString(),
+    services: {
+      redis: 'not connected yet',
+      socketio: 'not initialized yet'
+    }
+  });
+});
+
+// Try to load map routes
+try {
+  const mapRoutes = require('./src/routes/mapRoutes');
+  app.use('/api/map', mapRoutes);
+  console.log('✅ Map routes loaded successfully');
+} catch (error) {
+  console.error('❌ Map routes failed to load:', error.message);
+  console.error('❌ Route error details:', error.stack);
+}
+
+// Socket.IO setup
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// Try to initialize Socket.IO service
+try {
+  const socketService = require('./src/services/socketService');
+  socketService.initialize(io);
+  console.log('✅ Socket.IO service initialized');
+} catch (error) {
+  console.error('❌ Socket.IO service failed to initialize:', error.message);
+}
+
+// Try to connect to Redis
+async function initializeRedis() {
+  try {
+    const redisService = require('./src/services/redisService');
+    await redisService.connect();
+    console.log('✅ Redis connected successfully');
+  } catch (error) {
+    console.error('❌ Redis connection failed:', error.message);
+  }
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -78,29 +143,16 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Initialize services
-async function initializeServices() {
-  try {
-    // Connect to Redis
-    await redisService.connect();
-    logger.info('✅ Redis connected successfully');
-
-    // Initialize Socket.IO service
-    socketService.initialize(io);
-    logger.info('✅ Socket.IO service initialized');
-
-    // Start server
-    server.listen(PORT, () => {
-      logger.info(`🚀 Map Service running on port ${PORT}`);
-      logger.info(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-    });
-
-  } catch (error) {
-    logger.error('❌ Failed to initialize services:', error);
-    process.exit(1);
-  }
-}
+// Start server
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Caffis Map Service started successfully`);
+  console.log(`📍 Port: ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  
+  // Initialize Redis after server starts
+  initializeRedis();
+});
 
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {
@@ -110,8 +162,13 @@ const gracefulShutdown = async (signal) => {
     logger.info('🔌 HTTP server closed');
   });
   
-  await redisService.disconnect();
-  logger.info('📦 Redis disconnected');
+  try {
+    const redisService = require('./src/services/redisService');
+    await redisService.disconnect();
+    logger.info('📦 Redis disconnected');
+  } catch (error) {
+    console.error('❌ Redis disconnect error:', error.message);
+  }
   
   process.exit(0);
 };
@@ -121,14 +178,13 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
+  console.error('💥 Uncaught Exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 
-// Initialize and start
-initializeServices();
+module.exports = app;

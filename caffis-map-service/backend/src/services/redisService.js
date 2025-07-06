@@ -234,3 +234,89 @@ class RedisService {
 const redisService = new RedisService();
 
 module.exports = redisService;
+  // ============================================
+  // ADDITIONAL METHODS FOR SOCKET SERVICE
+  // ============================================
+
+  async setUserAvailability(userId, isAvailable) {
+    try {
+      const key = `availability:${userId}`;
+      const data = {
+        userId,
+        isAvailable,
+        timestamp: Date.now()
+      };
+      await this.client.setEx(key, 300, JSON.stringify(data)); // 5 min TTL
+      logger.info(`🎯 Availability set for user ${userId}: ${isAvailable}`);
+    } catch (error) {
+      logger.error('Error setting user availability:', error);
+    }
+  }
+
+  async getUserAvailability(userId) {
+    try {
+      const key = `availability:${userId}`;
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      logger.error('Error getting user availability:', error);
+      return null;
+    }
+  }
+
+  async setInvite(inviteId, inviteData) {
+    try {
+      const key = `invite:${inviteId}`;
+      await this.client.setEx(key, 3600, JSON.stringify(inviteData)); // 1 hour TTL
+      logger.info(`💌 Invite stored: ${inviteId}`);
+    } catch (error) {
+      logger.error('Error storing invite:', error);
+    }
+  }
+
+  async getInvite(inviteId) {
+    try {
+      const key = `invite:${inviteId}`;
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      logger.error('Error getting invite:', error);
+      return null;
+    }
+  }
+
+  async removeUserLocation(userId) {
+    try {
+      const key = `location:${userId}`;
+      await this.client.del(key);
+      logger.info(`📍 Location removed for user ${userId}`);
+    } catch (error) {
+      logger.error('Error removing user location:', error);
+    }
+  }
+
+  async getMapStatistics() {
+    try {
+      const keys = await this.client.keys('*');
+      const locationKeys = keys.filter(key => key.startsWith('location:'));
+      const availabilityKeys = keys.filter(key => key.startsWith('availability:'));
+      const inviteKeys = keys.filter(key => key.startsWith('invite:'));
+
+      return {
+        totalKeys: keys.length,
+        activeUsers: locationKeys.length,
+        availableUsers: availabilityKeys.length,
+        pendingInvites: inviteKeys.length,
+        timestamp: Date.now()
+      };
+    } catch (error) {
+      logger.error('Error getting map statistics:', error);
+      return {
+        totalKeys: 0,
+        activeUsers: 0,
+        availableUsers: 0,
+        pendingInvites: 0,
+        timestamp: Date.now()
+      };
+    }
+  }

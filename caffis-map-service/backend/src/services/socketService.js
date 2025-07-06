@@ -13,24 +13,41 @@ class SocketService {
   initialize(io) {
     this.io = io;
 
-    // Authentication middleware for Socket.IO
+    // FIXED: Authentication middleware for Socket.IO
     io.use(async (socket, next) => {
       try {
-        const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+        // Get token from different possible sources
+        let token = socket.handshake.auth?.token;
+        
+        if (!token && socket.handshake.headers?.authorization) {
+          const authHeader = socket.handshake.headers.authorization;
+          if (authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7);
+          }
+        }
         
         if (!token) {
+          logger.warn('Socket connection attempted without token');
           return next(new Error('Authentication error: No token provided'));
         }
 
         // Verify JWT token (same secret as main app)
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        socket.userId = decoded.id || decoded.userId;
+        
+        // Ensure we have a user ID
+        socket.userId = decoded.id || decoded.userId || decoded.sub;
         socket.userToken = token;
+
+        if (!socket.userId) {
+          logger.error('Token decoded but no user ID found:', decoded);
+          return next(new Error('Authentication error: Invalid token format'));
+        }
 
         logger.info(`🔐 User ${socket.userId} authenticated via WebSocket`);
         next();
+        
       } catch (error) {
-        logger.error('Socket authentication error:', error);
+        logger.error('Socket authentication error:', error.message);
         next(new Error('Authentication error: Invalid token'));
       }
     });
@@ -40,7 +57,7 @@ class SocketService {
       this.handleConnection(socket);
     });
 
-    logger.info('🔌 Socket.IO service initialized');
+    logger.info('🔌 Socket.IO service initialized successfully');
   }
 
   handleConnection(socket) {
@@ -66,18 +83,22 @@ class SocketService {
         }
 
         // Update location in Redis
-        await redisService.setUserLocation(userId, latitude, longitude, city);
+        await redisService.setUserLocation(userId, { latitude, longitude, city });
 
         // Join city room for real-time updates
-        socket.join(`city:${city}`);
+        if (city) {
+          socket.join(`city:${city.toLowerCase()}`);
+        }
 
         // Broadcast to other users in the same city
-        socket.to(`city:${city}`).emit('user:location:new', {
-          userId,
-          latitude,
-          longitude,
-          timestamp: Date.now()
-        });
+        if (city) {
+          socket.to(`city:${city.toLowerCase()}`).emit('user:location:new', {
+            userId,
+            latitude,
+            longitude,
+            timestamp: Date.now()
+          });
+        }
 
         // Send confirmation to user
         socket.emit('user:location:updated', {
@@ -85,16 +106,17 @@ class SocketService {
           message: 'Location updated successfully'
         });
 
-        // Get nearby users and send to client
-        const nearbyUsers = await redisService.getUsersInCity(city, userId);
-        socket.emit('users:nearby', nearbyUsers);
-
         logger.info(`📍 Location updated for user ${userId} in ${city}`);
+
       } catch (error) {
         logger.error('Error updating user location:', error);
         socket.emit('error', { message: 'Failed to update location' });
       }
     });
+
+    // ============================================
+    // AVAILABILITY EVENTS
+    // ============================================
 
     socket.on('user:availability:toggle', async (data) => {
       try {
@@ -103,38 +125,23 @@ class SocketService {
         // Update availability in Redis
         await redisService.setUserAvailability(userId, isAvailable);
 
-        // Get user location to determine city
-        const locationData = await redisService.getUserLocation(userId);
-        if (locationData && locationData.city) {
-          // Broadcast availability change to city
-          socket.to(`city:${locationData.city}`).emit('user:availability:changed', {
-            userId,
-            isAvailable,
-            timestamp: Date.now()
-          });
-        }
+        // Broadcast availability change
+        socket.broadcast.emit('user:availability:changed', {
+          userId,
+          isAvailable,
+          timestamp: Date.now()
+        });
 
         socket.emit('user:availability:updated', {
           success: true,
-          isAvailable,
-          message: isAvailable ? 'You are now available for coffee!' : 'You are now hidden from others'
+          isAvailable
         });
 
-        logger.info(`🔄 Availability toggled for user ${userId}: ${isAvailable}`);
+        logger.info(`🎯 Availability ${isAvailable ? 'enabled' : 'disabled'} for user ${userId}`);
+
       } catch (error) {
         logger.error('Error toggling availability:', error);
         socket.emit('error', { message: 'Failed to update availability' });
-      }
-    });
-
-    socket.on('users:nearby:request', async (data) => {
-      try {
-        const { city } = data;
-        const nearbyUsers = await redisService.getUsersInCity(city, userId);
-        socket.emit('users:nearby', nearbyUsers);
-      } catch (error) {
-        logger.error('Error getting nearby users:', error);
-        socket.emit('error', { message: 'Failed to get nearby users' });
       }
     });
 
@@ -144,24 +151,19 @@ class SocketService {
 
     socket.on('coffee-shops:request', async (data) => {
       try {
-        const { city } = data;
+        const { city, latitude, longitude, radius = 1000 } = data;
         
-        // Check cache first
-        let coffeeShops = await redisService.getCoffeeShops(city);
+        // Get coffee shops (mock data for now)
+        const coffeeShops = this.generateMockCoffeeShops(city);
         
-        if (!coffeeShops) {
-          // Generate mock coffee shops for now (you'll integrate with real API later)
-          coffeeShops = this.generateMockCoffeeShops(city);
-          await redisService.setCoffeeShops(city, coffeeShops);
-        }
-
-        socket.emit('coffee-shops:data', {
+        socket.emit('coffee-shops:received', {
+          coffeeShops,
           city,
-          shops: coffeeShops,
           timestamp: Date.now()
         });
 
-        logger.info(`☕ Coffee shops sent for ${city}: ${coffeeShops.length} shops`);
+        logger.info(`☕ Coffee shops sent to user ${userId} for ${city}`);
+
       } catch (error) {
         logger.error('Error getting coffee shops:', error);
         socket.emit('error', { message: 'Failed to get coffee shops' });
@@ -172,114 +174,39 @@ class SocketService {
     // INVITE EVENTS
     // ============================================
 
-    socket.on('invite:send', async (data) => {
+    socket.on('invite:send', async (data, callback) => {
       try {
-        const { toUserId, message, coffeeShopId, proposedTime } = data;
-
-        // Create invite data
-        const inviteData = {
+        const { toUserId, message, coffeeShopId, meetingTime } = data;
+        
+        const invite = {
           id: `invite_${Date.now()}_${userId}`,
           fromUserId: userId,
           toUserId,
-          message: message || 'Ti andrebbe di prendere un caffè insieme?',
+          message,
           coffeeShopId,
-          proposedTime,
-          status: 'pending',
-          createdAt: Date.now()
+          meetingTime,
+          timestamp: Date.now(),
+          status: 'pending'
         };
 
         // Store invite in Redis
-        const inviteId = await redisService.storeInvite(inviteData);
+        await redisService.setInvite(invite.id, invite);
 
-        // Send invite to target user if they're online
-        if (this.connectedUsers.has(toUserId)) {
-          this.io.to(`user:${toUserId}`).emit('invite:received', {
-            ...inviteData,
-            id: inviteId
-          });
-        }
+        // Send to target user if connected
+        this.sendToUser(toUserId, 'invite:received', invite);
 
         // Confirm to sender
-        socket.emit('invite:sent', {
-          success: true,
-          inviteId,
-          message: 'Invito inviato con successo!'
-        });
+        if (callback) {
+          callback({ success: true, invite });
+        }
 
         logger.info(`💌 Invite sent from ${userId} to ${toUserId}`);
+
       } catch (error) {
         logger.error('Error sending invite:', error);
-        socket.emit('error', { message: 'Failed to send invite' });
-      }
-    });
-
-    socket.on('invite:respond', async (data) => {
-      try {
-        const { inviteId, response } = data; // response: 'accept' or 'decline'
-
-        // Get invite data from Redis
-        const inviteStr = await redisService.client.get(inviteId);
-        if (!inviteStr) {
-          socket.emit('error', { message: 'Invite not found or expired' });
-          return;
+        if (callback) {
+          callback({ success: false, error: error.message });
         }
-
-        const inviteData = JSON.parse(inviteStr);
-        
-        // Update invite status
-        inviteData.status = response;
-        inviteData.respondedAt = Date.now();
-        
-        await redisService.client.setEx(inviteId, 1800, JSON.stringify(inviteData));
-
-        // Notify the sender
-        if (this.connectedUsers.has(inviteData.fromUserId)) {
-          this.io.to(`user:${inviteData.fromUserId}`).emit('invite:response', {
-            inviteId,
-            response,
-            respondedBy: userId,
-            timestamp: Date.now()
-          });
-        }
-
-        // Remove from pending invites
-        await redisService.client.sRem(`user:${userId}:pending_invites`, inviteId);
-
-        socket.emit('invite:responded', {
-          success: true,
-          inviteId,
-          response,
-          message: response === 'accept' ? 'Invito accettato!' : 'Invito rifiutato'
-        });
-
-        logger.info(`📮 Invite ${inviteId} ${response} by user ${userId}`);
-      } catch (error) {
-        logger.error('Error responding to invite:', error);
-        socket.emit('error', { message: 'Failed to respond to invite' });
-      }
-    });
-
-    // ============================================
-    // REAL-TIME CHAT EVENTS (for future)
-    // ============================================
-
-    socket.on('chat:message', async (data) => {
-      try {
-        const { toUserId, message } = data;
-        
-        // Send message to target user if online
-        if (this.connectedUsers.has(toUserId)) {
-          this.io.to(`user:${toUserId}`).emit('chat:message:received', {
-            fromUserId: userId,
-            message,
-            timestamp: Date.now()
-          });
-        }
-
-        logger.info(`💬 Message sent from ${userId} to ${toUserId}`);
-      } catch (error) {
-        logger.error('Error sending chat message:', error);
-        socket.emit('error', { message: 'Failed to send message' });
       }
     });
 
@@ -290,11 +217,11 @@ class SocketService {
     socket.on('disconnect', async (reason) => {
       try {
         logger.info(`👋 User ${userId} disconnected: ${reason}`);
-
+        
         // Remove from connected users
         this.connectedUsers.delete(userId);
 
-        // Remove location from Redis (user is no longer active)
+        // Remove location from Redis
         await redisService.removeUserLocation(userId);
 
         // Broadcast to all rooms that user is offline
@@ -340,12 +267,16 @@ class SocketService {
 
   generateMockCoffeeShops(city) {
     // Mock coffee shops - you'll replace this with real data
-    const mockShops = [
+    const baseCoords = city === 'torino' ? 
+      { lat: 45.0704, lng: 7.6862 } : 
+      { lat: 45.0704, lng: 7.6862 }; // Default to Turin
+
+    return [
       {
         id: 'shop_1',
         name: 'Caffè Centrale',
-        latitude: 45.0704 + (Math.random() - 0.5) * 0.01,
-        longitude: 7.6862 + (Math.random() - 0.5) * 0.01,
+        latitude: baseCoords.lat + (Math.random() - 0.5) * 0.01,
+        longitude: baseCoords.lng + (Math.random() - 0.5) * 0.01,
         rating: 4.5,
         priceRange: '€€',
         features: ['wifi', 'outdoor', 'quiet']
@@ -353,8 +284,8 @@ class SocketService {
       {
         id: 'shop_2',
         name: 'La Tazza d\'Oro',
-        latitude: 45.0704 + (Math.random() - 0.5) * 0.01,
-        longitude: 7.6862 + (Math.random() - 0.5) * 0.01,
+        latitude: baseCoords.lat + (Math.random() - 0.5) * 0.01,
+        longitude: baseCoords.lng + (Math.random() - 0.5) * 0.01,
         rating: 4.3,
         priceRange: '€',
         features: ['coworking', 'fast-wifi', 'power-outlets']
@@ -362,21 +293,19 @@ class SocketService {
       {
         id: 'shop_3',
         name: 'Caffè Torino',
-        latitude: 45.0704 + (Math.random() - 0.5) * 0.01,
-        longitude: 7.6862 + (Math.random() - 0.5) * 0.01,
+        latitude: baseCoords.lat + (Math.random() - 0.5) * 0.01,
+        longitude: baseCoords.lng + (Math.random() - 0.5) * 0.01,
         rating: 4.7,
         priceRange: '€€€',
         features: ['historic', 'elegant', 'pastries']
       }
     ];
-
-    return mockShops;
   }
 
   // Broadcast to all users in a city
   broadcastToCity(city, event, data) {
     if (this.io) {
-      this.io.to(`city:${city}`).emit(event, data);
+      this.io.to(`city:${city.toLowerCase()}`).emit(event, data);
     }
   }
 
@@ -397,7 +326,7 @@ class SocketService {
     if (!this.io) return [];
     
     try {
-      const sockets = await this.io.in(`city:${city}`).fetchSockets();
+      const sockets = await this.io.in(`city:${city.toLowerCase()}`).fetchSockets();
       return sockets.map(socket => socket.userId).filter(Boolean);
     } catch (error) {
       logger.error('Error getting users in city room:', error);
