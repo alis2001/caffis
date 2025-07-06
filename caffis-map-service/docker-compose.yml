@@ -1,0 +1,133 @@
+# caffis-map-service/docker-compose.yml
+version: '3.8'
+
+services:
+  # ============================================
+  # MAP SERVICE BACKEND
+  # ============================================
+  map-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: caffis-map-backend
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - MAIN_APP_API_URL=http://host.docker.internal:5000/api
+      - LOG_LEVEL=info
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/src:/app/src:ro  # Read-only for development
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - caffis-map-network
+      - caffis-shared-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # REDIS CACHE
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: caffis-map-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
+      - redis-data:/data
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    networks:
+      - caffis-map-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+  # ============================================
+  # MAP FRONTEND (Widget Development Server)
+  # ============================================
+  map-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: caffis-map-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - REACT_APP_MAP_SERVICE_URL=http://localhost:5001
+      - REACT_APP_MAPBOX_TOKEN=${MAPBOX_ACCESS_TOKEN}
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - /app/node_modules
+    depends_on:
+      - map-backend
+    networks:
+      - caffis-map-network
+    command: ["npm", "start"]
+
+  # ============================================
+  # NGINX (Static Assets & Load Balancing)
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: caffis-map-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./frontend/dist:/usr/share/nginx/html/map-widget:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - map-backend
+      - map-frontend
+    networks:
+      - caffis-map-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  redis-data:
+    driver: local
+  nginx-logs:
+    driver: local
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  caffis-map-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  
+  # Shared network to communicate with main app
+  caffis-shared-network:
+    external: true
+    name: caffis-main-app_default
