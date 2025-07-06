@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+*/node_modules/
+package-lock.json
+*/package-lock.json
+
+# Build outputs
+frontend/dist/
+frontend/build/
+backend/dist/
+backend/build/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+frontend/.env*
+backend/.env*
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker runtime data
+redis/data/
+redis/dump.rdb
+nginx/logs/
