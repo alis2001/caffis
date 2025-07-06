@@ -22,19 +22,19 @@ export default function CaffisLogo({ className = "w-6 h-6", animated = true }: C
     >
       <defs>
         <linearGradient id={cupGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{stopColor:"#F97316", stopOpacity:1}} />
-          <stop offset="50%" style={{stopColor:"#FB923C", stopOpacity:1}} />
-          <stop offset="100%" style={{stopColor:"#FCD34D", stopOpacity:1}} />
+          <stop offset="0%" style={{stopColor:"#dc2626", stopOpacity:1}} />
+          <stop offset="50%" style={{stopColor:"#ea580c", stopOpacity:1}} />
+          <stop offset="100%" style={{stopColor:"#f59e0b", stopOpacity:1}} />
         </linearGradient>
         
         <linearGradient id={coffeeGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{stopColor:"#1E40AF", stopOpacity:1}} />
-          <stop offset="100%" style={{stopColor:"#0891B2", stopOpacity:1}} />
+          <stop offset="0%" style={{stopColor:"#eab308", stopOpacity:1}} />
+          <stop offset="100%" style={{stopColor:"#facc15", stopOpacity:1}} />
         </linearGradient>
         
         <linearGradient id={steamGradientId} x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" style={{stopColor:"#10B981", stopOpacity:0.8}} />
-          <stop offset="100%" style={{stopColor:"#059669", stopOpacity:0.3}} />
+          <stop offset="0%" style={{stopColor:"#f59e0b", stopOpacity:0.8}} />
+          <stop offset="100%" style={{stopColor:"#ea580c", stopOpacity:0.3}} />
         </linearGradient>
       </defs>
       

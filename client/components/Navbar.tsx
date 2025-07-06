@@ -448,35 +448,56 @@ export default function Navbar() {
       />
 
       <div className="relative z-10 w-full flex items-center justify-between">
-        {/* Left: Logo with Text */}
-        <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-3">
+        {/* Left: Logo with Text Beside It */}
+        <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-4">
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 300 }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-4"
           >
-            {/* Clean Logo - No Background */}
+            {/* Much Larger Logo with Purple Colors */}
             <motion.div
-              whileHover={{ rotate: 360 }}
+              whileHover={{ 
+                rotate: 360,
+                scale: 1.1,
+                filter: "drop-shadow(0 0 25px rgba(139, 92, 246, 0.6))"
+              }}
               transition={{ duration: 0.8, ease: "easeInOut" }}
+              className="relative"
             >
-              <CaffisLogo className="w-10 h-10" />
+              <CaffisLogo className="w-20 h-20" />
+              
+              {/* Enhanced Glowing Ring Effect on Hover */}
+              <motion.div
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400/30 to-pink-400/30 blur-lg -z-10"
+                initial={{ scale: 0, opacity: 0 }}
+                whileHover={{ scale: 1.4, opacity: 1 }}
+                transition={{ duration: 0.6 }}
+              />
             </motion.div>
             
-            {/* Brand Text with Updated Gradient */}
+            {/* Simple Text Beside Logo */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h1 className="text-2xl font-bold">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500">
-                  Caffis
-                </span>
-              </h1>
-              <p className="text-xs text-gray-600">
+              <motion.p 
+                className="text-lg font-medium text-white"
+                style={{
+                  filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))",
+                }}
+                animate={{ 
+                  opacity: [0.8, 1, 0.8] 
+                }}
+                transition={{ 
+                  duration: 3, 
+                  repeat: Infinity,
+                  ease: "easeInOut" 
+                }}
+              >
                 Connetti con un caffè
-              </p>
+              </motion.p>
             </motion.div>
           </motion.div>
         </Link>
