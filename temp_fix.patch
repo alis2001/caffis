@@ -1,0 +1,15 @@
+--- a/client/app/dashboard/page.tsx
++++ b/client/app/dashboard/page.tsx
+@@ -640,7 +640,11 @@
+           <div className="card-apple mb-8">
+             <div className="flex items-center justify-between mb-6">
+               <h2 className="text-2xl font-bold text-gray-900">Attività Recente</h2>
+-              <AppleButton variant="secondary" size="small">
++              <AppleButton 
++                variant="secondary" 
++                size="small"
++                onClick={() => router.push('/activity')}
++                icon={<Calendar />}>
+                 Vedi Tutto
+               </AppleButton>
+             </div>

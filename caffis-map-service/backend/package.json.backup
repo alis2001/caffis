@@ -2,9 +2,9 @@
   "name": "caffis-map-service-backend",
   "version": "1.0.0",
   "description": "Caffis Map Service Backend - Real-time location and coffee meetup service",
-  "main": "src/server.js",
+  "main": "minimal-server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node minimal-server.js",
     "dev": "nodemon src/server.js",
     "test": "jest",
     "test:watch": "jest --watch",

@@ -640,7 +640,7 @@ export default function Dashboard() {
           <div className="card-apple mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Attività Recente</h2>
-              <AppleButton variant="secondary" size="small" onClick={() => router.push("/activity")} icon={<Calendar />}>
+              <AppleButton variant="secondary" size="small">
                 Vedi Tutto
               </AppleButton>
             </div>
@@ -805,7 +805,6 @@ export default function Dashboard() {
         <MapWidget
           token={authToken}
           onClose={() => setShowMap(false)}
-          // Remove fixed initialPosition - let it center automatically
         />
       )}
     </div>

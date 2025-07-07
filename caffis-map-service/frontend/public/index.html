@@ -1,23 +1,168 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Caffis Map Widget</title>
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caffis Map Widget - Development</title>
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 20px; 
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin: 10px 0; 
+            text-align: center;
+            font-weight: 600;
+        }
+        .loading { background: #fff3cd; color: #856404; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        #root { min-height: 400px; }
+        .debug { font-family: monospace; font-size: 12px; background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
 </head>
 <body>
-    <div id='map-root'></div>
-    <script src='/caffis-map-widget.js'></script>
+    <div class="container">
+        <h1>🗺️ Caffis Map Widget - Development Mode</h1>
+        <div id="status" class="status loading">⏳ Loading dependencies...</div>
+        <div id="debug" class="debug">Debug: Starting...</div>
+        <div id="info" class="status info">
+            <strong>Development Info:</strong><br>
+            Widget URL: <code>http://localhost:3002</code><br>
+            Main App: <code>http://localhost:3000</code>
+        </div>
+        <div id="root"></div>
+    </div>
+    
+    <!-- Load external dependencies first -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    
     <script>
-        // Initialize the map widget
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
+        const debug = document.getElementById('debug');
+        const status = document.getElementById('status');
         
-        if (window.CaffisMapWidget) {
-            const widget = new window.CaffisMapWidget.default({
-                token: token,
-                container: 'map-root'
-            });
-        }
+        const log = (message) => {
+            console.log(message);
+            debug.innerHTML += message + '<br>';
+        };
+        
+        const checkDependencies = () => {
+            log('Checking dependencies...');
+            
+            if (typeof React === 'undefined') {
+                status.className = 'status error';
+                status.innerHTML = '❌ React failed to load';
+                return false;
+            }
+            log('✅ React loaded: ' + React.version);
+            
+            if (typeof ReactDOM === 'undefined') {
+                status.className = 'status error';
+                status.innerHTML = '❌ ReactDOM failed to load';
+                return false;
+            }
+            log('✅ ReactDOM loaded');
+            
+            if (typeof mapboxgl === 'undefined') {
+                status.className = 'status error';
+                status.innerHTML = '❌ Mapbox failed to load';
+                return false;
+            }
+            log('✅ Mapbox loaded: ' + mapboxgl.version);
+            
+            // Make available globally
+            window.React = React;
+            window.ReactDOM = ReactDOM;
+            window.mapboxgl = mapboxgl;
+            
+            status.className = 'status success';
+            status.innerHTML = '✅ Dependencies loaded, loading widget...';
+            
+            return true;
+        };
+        
+        const loadWidget = () => {
+            log('Loading widget script...');
+            
+            const script = document.createElement('script');
+            script.src = '/caffis-map-widget.js';
+            script.onload = () => {
+                log('Widget script loaded, checking global...');
+                checkWidget();
+            };
+            script.onerror = () => {
+                log('❌ Failed to load widget script');
+                status.className = 'status error';
+                status.innerHTML = '❌ Failed to load widget script';
+            };
+            
+            document.head.appendChild(script);
+        };
+        
+        const checkWidget = () => {
+            log('Checking for CaffisMapWidget...');
+            
+            // Check what's available globally
+            log('window.CaffisMapWidget: ' + typeof window.CaffisMapWidget);
+            if (window.CaffisMapWidget) {
+                log('CaffisMapWidget keys: ' + Object.keys(window.CaffisMapWidget));
+            }
+            
+            if (window.CaffisMapWidget && window.CaffisMapWidget.DraggableMapWidget) {
+                try {
+                    log('Rendering widget...');
+                    
+                    const container = document.getElementById('root');
+                    const root = ReactDOM.createRoot(container);
+                    const MapWidget = window.CaffisMapWidget.DraggableMapWidget;
+                    
+                    root.render(
+                        React.createElement(MapWidget, {
+                            token: 'dev-token',
+                            onClose: () => log('Map widget closed'),
+                            initialPosition: { x: 50, y: 50 }
+                        })
+                    );
+                    
+                    status.className = 'status success';
+                    status.innerHTML = '✅ Map widget loaded successfully!';
+                    log('✅ Widget rendered successfully');
+                    
+                } catch (error) {
+                    log('❌ Error rendering widget: ' + error.message);
+                    status.className = 'status error';
+                    status.innerHTML = '❌ Error: ' + error.message;
+                }
+            } else {
+                log('❌ CaffisMapWidget.DraggableMapWidget not found');
+                status.className = 'status error';
+                status.innerHTML = '❌ Widget not properly exported';
+            }
+        };
+        
+        // Start the loading process
+        setTimeout(() => {
+            if (checkDependencies()) {
+                loadWidget();
+            }
+        }, 1000);
     </script>
 </body>
 </html>

@@ -1,82 +1,93 @@
 const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 
-module.exports = (env, argv) => {
-  const isProduction = argv.mode === 'production';
+module.exports = {
+  mode: 'development',
+  entry: './src/index.js',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'caffis-map-widget.js',
+    library: {
+      name: 'CaffisMapWidget',
+      type: 'umd'
+    },
+    globalObject: 'this',
+    clean: true
+  },
   
-  return {
-    entry: './src/index.js',
-    output: {
-      path: path.resolve(__dirname, 'dist'),
-      filename: 'caffis-map-widget.js',
-      library: 'CaffisMapWidget',
-      libraryTarget: 'umd',
-      globalObject: 'this',
-      clean: true
+  resolve: {
+    extensions: ['.js', '.jsx'],
+    fallback: {
+      "buffer": require.resolve("buffer")
+    }
+  },
+  
+  externals: {
+    'react': {
+      commonjs: 'react',
+      commonjs2: 'react',
+      amd: 'React',
+      root: 'React'
     },
-    
-    resolve: {
-      extensions: ['.js', '.jsx', '.json'],
-      alias: {
-        '@': path.resolve(__dirname, 'src')
-      }
-    },
-    
-    module: {
-      rules: [
-        {
-          test: /\.(js|jsx)$/,
-          exclude: /node_modules/,
-          use: {
-            loader: 'babel-loader',
-            options: {
-              presets: [
-                '@babel/preset-react',
-                ['@babel/preset-env', {
-                  targets: {
-                    browsers: ['last 2 versions', 'ie >= 11']
-                  }
-                }]
-              ]
-            }
+    'react-dom': {
+      commonjs: 'react-dom',
+      commonjs2: 'react-dom',
+      amd: 'ReactDOM',
+      root: 'ReactDOM'
+    }
+  },
+  
+  module: {
+    rules: [
+      {
+        test: /\.(js|jsx)$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [
+              '@babel/preset-react',
+              ['@babel/preset-env', {
+                targets: {
+                  browsers: ['last 2 versions']
+                }
+              }]
+            ]
           }
-        },
-        {
-          test: /\.css$/,
-          use: ['style-loader', 'css-loader']
         }
-      ]
-    },
-    
-    plugins: [
-      new HtmlWebpackPlugin({
-        template: './public/index.html',
-        inject: 'body',
-        scriptLoading: 'blocking'
-      })
-    ],
-    
-    externals: {
-      'react': 'React',
-      'react-dom': 'ReactDOM',
-      'framer-motion': 'FramerMotion',
-      'mapbox-gl': 'mapboxgl'
-    },
-    
-    devServer: {
-      static: {
-        directory: path.join(__dirname, 'public'),
       },
-      port: 3001,
-      host: '0.0.0.0',
-      hot: true,
-      open: false,
-      allowedHosts: 'all',
-      headers: {
-        'Access-Control-Allow-Origin': '*',
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
       }
+    ]
+  },
+  
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env': {
+        'NODE_ENV': JSON.stringify('development')
+      }
+    }),
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer']
+    })
+  ],
+  
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'public'),
     },
-    
-    devtool: isProduction ? 'source-map' : 'eval-source-map'
-  };
+    port: 3001,
+    host: '0.0.0.0',
+    hot: false, // Disable hot module replacement to fix WebSocket issues
+    liveReload: false, // Disable live reload
+    allowedHosts: 'all',
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    client: false // Disable client overlay
+  },
+  
+  devtool: 'eval-source-map'
 };
