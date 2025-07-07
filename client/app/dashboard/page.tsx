@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth, useRequireAuth } from "@/contexts/AuthContext";
 import { Coffee, Users, MapPin, Calendar, User, MessageCircle, Settings, Bell, Plus } from "lucide-react";
 
+// Remove the dynamic import for DraggableMapWidget
+
 // Apple WWDC 2025 inspired components
 const AppleButton = ({ 
   children, 
@@ -98,11 +100,19 @@ const QuickAction = ({ title, icon, variant, onClick }) => {
   );
 };
 
-export default function AppleDashboard() {
+export default function Dashboard() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
   const { shouldRedirect, isLoading: authLoading } = useRequireAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showMap, setShowMap] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  
+  // Get auth token from localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('caffis_auth_token') || localStorage.getItem('token');
+    setAuthToken(token);
+  }, []);
   
   // Update time every minute
   useEffect(() => {
@@ -309,7 +319,7 @@ export default function AppleDashboard() {
         }
       `}</style>
 
-      <div className="page-content-spacing pb-12">
+      <div className="pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header Section */}
@@ -409,13 +419,13 @@ export default function AppleDashboard() {
           {/* Main Features Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8 mb-8">
             
-            {/* Discover Coffee Meetups */}
+            {/* Discover Coffee Meetups - MODIFIED TO OPEN MAP */}
             <FeatureCard
               title="Scopri Caffè"
               description="Trova persone interessanti vicino a te per un caffè spontaneo"
               icon={<Coffee />}
               variant="coffee"
-              onClick={() => router.push('/discover')}
+              onClick={() => setShowMap(true)}
               stats={[
                 { value: "23", label: "Persone Online" },
                 { value: "5", label: "Nelle Vicinanze" }
@@ -448,13 +458,13 @@ export default function AppleDashboard() {
               ]}
             />
 
-            {/* Location Explorer */}
+            {/* Location Explorer - MODIFIED TO OPEN MAP */}
             <FeatureCard
               title="Esplora Luoghi"
               description="Scopri i migliori caffè e luoghi di incontro della tua città"
               icon={<MapPin />}
               variant="location"
-              onClick={() => router.push('/locations')}
+              onClick={() => setShowMap(true)}
               stats={[
                 { value: "156", label: "Caffè Partner" },
                 { value: "4.8★", label: "Rating Medio" }
@@ -634,7 +644,7 @@ export default function AppleDashboard() {
                   variant="primary" 
                   size="large"
                   icon={<Coffee />}
-                  onClick={() => router.push('/discover')}
+                  onClick={() => setShowMap(true)}
                 >
                   Trova Caffè Ora
                 </AppleButton>
@@ -651,6 +661,39 @@ export default function AppleDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Map Modal - Opens in new window */}
+      {showMap && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-md">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <MapPin className="w-6 h-6" />
+              Apri Mappa Caffè
+            </h3>
+            <p className="text-gray-600 mb-4">
+              La mappa interattiva si aprirà in una nuova finestra. 
+              Assicurati di permettere i popup nel tuo browser.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  window.open('http://localhost:5001', '_blank');
+                  setShowMap(false);
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Apri Mappa
+              </button>
+              <button
+                onClick={() => setShowMap(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Annulla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

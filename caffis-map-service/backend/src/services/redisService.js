@@ -201,40 +201,6 @@ class RedisService {
   }
 
   // ============================================
-  // UTILITY METHODS
-  // ============================================
-
-  async getConnectionStatus() {
-    return {
-      connected: this.isConnected,
-      client: !!this.client
-    };
-  }
-
-  async flushAll() {
-    try {
-      await this.client.flushAll();
-      logger.info('🧹 Redis cache cleared');
-    } catch (error) {
-      logger.error('Error clearing cache:', error);
-    }
-  }
-
-  async getKeys(pattern = '*') {
-    try {
-      return await this.client.keys(pattern);
-    } catch (error) {
-      logger.error('Error getting keys:', error);
-      return [];
-    }
-  }
-}
-
-// Create singleton instance
-const redisService = new RedisService();
-
-module.exports = redisService;
-  // ============================================
   // ADDITIONAL METHODS FOR SOCKET SERVICE
   // ============================================
 
@@ -285,16 +251,6 @@ module.exports = redisService;
     }
   }
 
-  async removeUserLocation(userId) {
-    try {
-      const key = `location:${userId}`;
-      await this.client.del(key);
-      logger.info(`📍 Location removed for user ${userId}`);
-    } catch (error) {
-      logger.error('Error removing user location:', error);
-    }
-  }
-
   async getMapStatistics() {
     try {
       const keys = await this.client.keys('*');
@@ -320,3 +276,38 @@ module.exports = redisService;
       };
     }
   }
+
+  // ============================================
+  // UTILITY METHODS
+  // ============================================
+
+  async getConnectionStatus() {
+    return {
+      connected: this.isConnected,
+      client: !!this.client
+    };
+  }
+
+  async flushAll() {
+    try {
+      await this.client.flushAll();
+      logger.info('🧹 Redis cache cleared');
+    } catch (error) {
+      logger.error('Error clearing cache:', error);
+    }
+  }
+
+  async getKeys(pattern = '*') {
+    try {
+      return await this.client.keys(pattern);
+    } catch (error) {
+      logger.error('Error getting keys:', error);
+      return [];
+    }
+  }
+}
+
+// Create singleton instance
+const redisService = new RedisService();
+
+module.exports = redisService;

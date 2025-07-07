@@ -1,40 +1,52 @@
-# ============================================
-# UPDATED ROOT docker-compose.yml
-# Add this to your existing ~/Projects/caffis/docker-compose.yml
-# ============================================
-
 version: '3.8'
 
 services:
-  # Your existing services (keep these as they are)
+  # ================================
+  # MAIN APPLICATION
+  # ================================
+  
   backend:
     build: ./server
     container_name: caffis-backend
     ports:
       - "5000:5000"
       - "5555:5555" 
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DATABASE_URL=postgresql://caffis_user:admin5026@db:5432/caffis_db
+      - JWT_SECRET=${JWT_SECRET}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
     volumes:
       - ./server:/app
       - /app/node_modules
-    env_file:
-      - .env
     depends_on:
       - db
     restart: unless-stopped
+    networks:
+      - caffis-network
 
   frontend:
     build: ./client
     container_name: caffis-frontend
     ports:
       - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_MAP_SERVICE_URL=http://localhost:5001
     volumes:
       - ./client:/app
       - /app/node_modules
-    env_file:
-      - .env
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - caffis-network
 
   db:
     image: postgres:15
@@ -48,67 +60,53 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - caffis-network
 
-  # ============================================
-  # ADD THESE NEW SERVICES FOR MAP MICROSERVICE
-  # ============================================
+  # ================================
+  # MAP MICROSERVICE
+  # ================================
 
-  # Map Service Backend
   map-backend:
-    build: 
-      context: ./caffis-map-service/backend
-      dockerfile: Dockerfile
+    build: ./caffis-map-service/backend
     container_name: caffis-map-backend
-    restart: unless-stopped
     ports:
       - "5001:5001"
     environment:
       - NODE_ENV=development
       - PORT=5001
-      - REDIS_HOST=map-redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=caffis-dev-redis-2025
       - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis://:caffis-dev-redis-2025@map-redis:6379
       - FRONTEND_URL=http://localhost:3000
-      - MAIN_API_URL=http://backend:5000
-      - MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoiYWxpczIwMDEiLCJhIjoiY21jcnNjODFoMHIybTJrcXNuYWw1NXZlYiJ9.dqmeeyoou2m-BngWFzG2Lw
+      - ALLOWED_ORIGINS=http://localhost:3000,http://frontend:3000
+      - MAIN_APP_API_URL=http://backend:5000
+      - MAPBOX_ACCESS_TOKEN=${MAPBOX_ACCESS_TOKEN}
     volumes:
       - ./caffis-map-service/backend:/app
       - /app/node_modules
     depends_on:
       - map-redis
       - backend
+    restart: unless-stopped
+    networks:
+      - caffis-network
 
-  # Redis for Map Service
   map-redis:
     image: redis:7-alpine
     container_name: caffis-map-redis
-    restart: unless-stopped
     ports:
       - "6379:6379"
     command: redis-server --requirepass caffis-dev-redis-2025
     volumes:
-      - map_redis_data:/data
-
-  # Map Service Frontend (Development)
-  map-frontend-dev:
-    build:
-      context: ./caffis-map-service/frontend
-      dockerfile: Dockerfile
-      target: development
-    container_name: caffis-map-frontend-dev
-    ports:
-      - "3002:3001"
-    environment:
-      - REACT_APP_MAP_API_URL=http://localhost:5001
-      - REACT_APP_MAPBOX_TOKEN=pk.eyJ1IjoiYWxpczIwMDEiLCJhIjoiY21jcnNjODFoMHIybTJrcXNuYWw1NXZlYiJ9.dqmeeyoou2m-BngWFzG2Lw
-      - CHOKIDAR_USEPOLLING=true
-    volumes:
-      - ./caffis-map-service/frontend:/app
-      - /app/node_modules
-    depends_on:
-      - map-backend
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - caffis-network
 
 volumes:
   pgdata:
-  map_redis_data:  # Add this new volume
+  redis_data:
+
+networks:
+  caffis-network:
+    driver: bridge

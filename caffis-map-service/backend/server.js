@@ -24,11 +24,11 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api/', limiter);
+app.use('/api', limiter);
 
 // CORS
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: ["http://localhost:3000", "http://frontend:3000", "http://localhost:3001"],
   credentials: true
 }));
 
@@ -101,10 +101,9 @@ try {
   console.error('❌ Route error details:', error.stack);
 }
 
-// Socket.IO setup
 const io = socketIo(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://frontend:3000", "http://localhost:3001"],
     methods: ["GET", "POST"],
     credentials: true
   }
