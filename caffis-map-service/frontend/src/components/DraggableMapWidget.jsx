@@ -4,8 +4,8 @@ import { motion, useDragControls } from 'framer-motion';
 import MapboxMap from './map/MapboxMap';
 import AvailabilityToggle from './ui/AvailabilityToggle';
 import UserProfilePopup from './ui/UserProfilePopup';
-import useMapSocket from '../hooks/useMapSocket';
-import useGeolocation from '../hooks/useGeolocation';
+import useMapSocket from './hooks/useMapSocket';
+import useGeolocation from './hooks/useGeolocation';
 import { MapPin, Maximize2, Minimize2, X, Coffee, Users } from 'lucide-react';
 
 const DraggableMapWidget = ({ 

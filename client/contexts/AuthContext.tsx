@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 
 // Types
 interface User {
+  onboardingCompleted?: boolean;
   id: string;
   firstName: string;
   lastName: string;
@@ -15,6 +16,7 @@ interface User {
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   createdAt: string;
+  onboardingCompleted?: boolean;
 }
 
 interface AuthContextType {
@@ -110,7 +112,7 @@ class AuthAPI {
   private static readonly BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
   static async fetchUser(token: string): Promise<User> {
-    const response = await fetch(`${this.BASE_URL}/user/profile`, {
+    const response = await fetch(`${this.BASE_URL}/api/user/profile`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',

@@ -1,0 +1,23 @@
+<html>
+<head>
+    <title>Caffis Map Widget</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+</head>
+<body>
+    <div id='map-root'></div>
+    <script src='/caffis-map-widget.js'></script>
+    <script>
+        // Initialize the map widget
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        if (window.CaffisMapWidget) {
+            const widget = new window.CaffisMapWidget.default({
+                token: token,
+                container: 'map-root'
+            });
+        }
+    </script>
+</body>
+</html>

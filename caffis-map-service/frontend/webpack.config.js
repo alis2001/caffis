@@ -1,5 +1,5 @@
-// caffis-map-service/frontend/webpack.config.js
 const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -8,9 +8,10 @@ module.exports = (env, argv) => {
     entry: './src/index.js',
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: isProduction ? 'caffis-map-widget.[contenthash].js' : 'caffis-map-widget.js',
+      filename: 'caffis-map-widget.js',
       library: 'CaffisMapWidget',
       libraryTarget: 'umd',
+      globalObject: 'this',
       clean: true
     },
     
@@ -43,46 +44,39 @@ module.exports = (env, argv) => {
         {
           test: /\.css$/,
           use: ['style-loader', 'css-loader']
-        },
-        {
-          test: /\.(png|jpg|jpeg|gif|svg)$/,
-          type: 'asset/resource',
-          generator: {
-            filename: 'images/[name].[hash][ext]'
-          }
         }
       ]
     },
     
-    externals: isProduction ? {
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: './public/index.html',
+        inject: 'body',
+        scriptLoading: 'blocking'
+      })
+    ],
+    
+    externals: {
       'react': 'React',
       'react-dom': 'ReactDOM',
-      'framer-motion': 'FramerMotion'
-    } : {},
+      'framer-motion': 'FramerMotion',
+      'mapbox-gl': 'mapboxgl'
+    },
     
     devServer: {
       static: {
-        directory: path.join(__dirname, 'dist'),
+        directory: path.join(__dirname, 'public'),
       },
       port: 3001,
+      host: '0.0.0.0',
       hot: true,
-      open: true,
-      historyApiFallback: true
+      open: false,
+      allowedHosts: 'all',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
     },
     
-    devtool: isProduction ? 'source-map' : 'eval-source-map',
-    
-    optimization: {
-      splitChunks: isProduction ? {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          }
-        }
-      } : false
-    }
+    devtool: isProduction ? 'source-map' : 'eval-source-map'
   };
 };

@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # ================================
+  # MAIN APPLICATION - DEVELOPMENT MODE
+  # ================================
+  
+  backend:
+    build: 
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: caffis-backend
+    ports:
+      - "5000:5000"
+      - "5555:5555" 
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DATABASE_URL=postgresql://caffis_user:admin5026@db:5432/caffis_db
+      - JWT_SECRET=caffis-super-secret-jwt-key-change-in-production-12345
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    depends_on:
+      - db
+    command: npm run dev
+    networks:
+      - caffis-network
+
+  frontend:
+    build: 
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: caffis-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_MAP_SERVICE_URL=http://localhost:5001
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - caffis-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: caffis-db
+    restart: always
+    environment:
+      POSTGRES_USER: caffis_user
+      POSTGRES_PASSWORD: admin5026
+      POSTGRES_DB: caffis_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - caffis-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caffis_user -d caffis_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================
+  # MAP MICROSERVICE - DEVELOPMENT MODE
+  # ================================
+
+  map-redis:
+    image: redis:7-alpine
+    container_name: caffis-map-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - caffis-network
+
+  map-backend:
+    build: 
+      context: ./caffis-map-service/backend
+      dockerfile: Dockerfile.dev
+    container_name: caffis-map-backend
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+      - JWT_SECRET=caffis-super-secret-jwt-key-change-in-production-12345
+      - REDIS_URL=redis://map-redis:6379
+    volumes:
+      - ./caffis-map-service/backend:/app
+      - /app/node_modules
+    depends_on:
+      - map-redis
+    command: npm run dev
+    networks:
+      - caffis-network
+
+  map-frontend:
+    build:
+      context: ./caffis-map-service/frontend
+      dockerfile: Dockerfile.dev
+    container_name: caffis-map-frontend
+    ports:
+      - "3002:3001"
+    environment:
+      - REACT_APP_MAP_API_URL=http://localhost:5001
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./caffis-map-service/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - map-backend
+    command: npm run dev
+    networks:
+      - caffis-network
+
+volumes:
+  pgdata:
+  redis_data:
+
+networks:
+  caffis-network:
+    driver: bridge

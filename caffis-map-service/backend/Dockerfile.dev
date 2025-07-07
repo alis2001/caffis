@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+RUN apk add --no-cache curl
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+EXPOSE 5001
+
+# Use nodemon for hot reload
+CMD ["npm", "run", "dev"]

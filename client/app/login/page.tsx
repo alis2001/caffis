@@ -51,7 +51,7 @@ function LoginPageContent() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -99,7 +99,7 @@ function LoginPageContent() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -119,7 +119,7 @@ function LoginPageContent() {
       await login(data.token);
 
       // Check user's onboarding status to redirect properly
-      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
+      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, {
         headers: {
           'Authorization': `Bearer ${data.token}`,
           'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ function LoginPageContent() {
 
     try {
       // Re-request login code by calling login again
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

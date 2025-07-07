@@ -364,7 +364,7 @@ export default function VoiceOnboardingPage() {
       const token = localStorage.getItem('caffis_auth_token') || localStorage.getItem('token');
       
       if (token) {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/preferences`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/preferences`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

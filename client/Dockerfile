@@ -2,16 +2,22 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy only package files first (for better caching)
+# Copy package files
 COPY package*.json ./
+COPY tsconfig.json ./
 
-# Install dependencies (this layer will be cached)
+# Install dependencies
 RUN npm ci --prefer-offline --no-audit
 
-# Copy the rest of the application
+# Copy all source files
 COPY . .
 
-# Build the Next.js app
+# Set environment variables
+ENV NEXT_PUBLIC_API_URL=http://localhost:5000
+ENV NEXT_PUBLIC_MAP_SERVICE_URL=http://localhost:5001
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the application - this time without || true so we see errors
 RUN npm run build
 
 EXPOSE 3000

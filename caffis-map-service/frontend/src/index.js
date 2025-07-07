@@ -9,8 +9,8 @@ import UserProfilePopup from './components/ui/UserProfilePopup';
 import AvailabilityToggle from './components/ui/AvailabilityToggle';
 
 // Import hooks
-import useMapSocket from './hooks/useMapSocket';
-import useGeolocation from './hooks/useGeolocation';
+import useMapSocket from './components/hooks/useMapSocket';
+import useGeolocation from './components/hooks/useGeolocation';
 import useMapbox from './hooks/useMapbox';
 
 // Import services

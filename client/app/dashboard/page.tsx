@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useRequireAuth } from "@/contexts/AuthContext";
-import { Coffee, Users, MapPin, Calendar, User, MessageCircle, Settings, Bell, Plus } from "lucide-react";
-
-// Remove the dynamic import for DraggableMapWidget
+import { Coffee, Users, MapPin, Calendar, User, MessageCircle, Settings, Bell, Plus, X, Minimize2, Maximize2, Move } from "lucide-react";
 
 // Apple WWDC 2025 inspired components
 const AppleButton = ({ 
@@ -65,7 +63,7 @@ const FeatureCard = ({
   );
 };
 
-const StatCard = ({ title, value, change, icon, gradient }) => {
+const StatCard = ({ title, value, change = "", icon, gradient }) => {
   return (
     <div className="card-apple">
       <div className="flex items-center justify-between mb-4">
@@ -97,6 +95,112 @@ const QuickAction = ({ title, icon, variant, onClick }) => {
       <div className="text-3xl mb-2">{icon}</div>
       <span className="text-sm font-medium">{title}</span>
     </button>
+  );
+};
+
+// Map Widget Component that integrates with the microservice
+const MapWidget = ({ token, onClose }) => {
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [position, setPosition] = useState({ x: window.innerWidth - 450, y: 100 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef(null);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+
+  const handleMouseDown = (e) => {
+    if (e.target.closest('.map-controls')) return;
+    setIsDragging(true);
+    dragStartPos.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStartPos.current.x,
+      y: e.clientY - dragStartPos.current.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging]);
+
+  const widgetSize = isMaximized 
+    ? { width: '90vw', height: '90vh' } 
+    : isMinimized 
+    ? { width: '300px', height: '60px' }
+    : { width: '400px', height: '500px' };
+
+  return (
+    <div
+      ref={dragRef}
+      className="fixed z-50 bg-white rounded-2xl shadow-2xl overflow-hidden"
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        width: widgetSize.width,
+        height: widgetSize.height,
+        transition: isDragging ? 'none' : 'all 0.3s ease',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+      {/* Header */}
+      <div 
+        className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 flex items-center justify-between map-controls"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="flex items-center gap-3">
+          <MapPin className="w-5 h-5 text-white" />
+          <h3 className="text-white font-semibold">Caffis Map</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="p-1 hover:bg-white/20 rounded transition-colors"
+          >
+            <Minimize2 className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="p-1 hover:bg-white/20 rounded transition-colors"
+          >
+            <Maximize2 className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-white/20 rounded transition-colors"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      </div>
+
+      {/* Map Content */}
+      {!isMinimized && (
+        <div className="relative w-full h-full">
+          <iframe
+            src={`http://localhost:3002?token=${token}`}
+            className="w-full h-full border-0"
+            title="Caffis Map"
+            allow="geolocation"
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -254,6 +358,17 @@ export default function Dashboard() {
           box-shadow: var(--shadow-large);
         }
 
+        .feature-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
         .feature-card:hover::before {
           opacity: 0.1;
         }
@@ -270,8 +385,16 @@ export default function Dashboard() {
           background: var(--gradient-events);
         }
 
+        .feature-card-location::before {
+          background: var(--gradient-location);
+        }
+
         .feature-card-profile::before {
           background: var(--gradient-profile);
+        }
+
+        .feature-card-chat::before {
+          background: var(--gradient-chat);
         }
 
         .bg-apple-mesh {
@@ -311,8 +434,22 @@ export default function Dashboard() {
           background-clip: text;
         }
 
+        .icon-location {
+          background: var(--gradient-location);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
         .icon-profile {
           background: var(--gradient-profile);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .icon-chat {
+          background: var(--gradient-chat);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -380,6 +517,7 @@ export default function Dashboard() {
             <StatCard
               title="Eventi futuri"
               value="3"
+              change=""
               icon={<Calendar />}
               gradient="from-pink-400 to-red-500"
             />
@@ -393,7 +531,7 @@ export default function Dashboard() {
                 title="Trova Caffè Ora"
                 icon={<Coffee />}
                 variant="coffee"
-                onClick={() => router.push('/find-coffee')}
+                onClick={() => setShowMap(true)}
               />
               <QuickAction
                 title="Crea Evento"
@@ -662,37 +800,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Map Modal - Opens in new window */}
-      {showMap && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <MapPin className="w-6 h-6" />
-              Apri Mappa Caffè
-            </h3>
-            <p className="text-gray-600 mb-4">
-              La mappa interattiva si aprirà in una nuova finestra. 
-              Assicurati di permettere i popup nel tuo browser.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  window.open('http://localhost:5001', '_blank');
-                  setShowMap(false);
-                }}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Apri Mappa
-              </button>
-              <button
-                onClick={() => setShowMap(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Annulla
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Map Widget - Integrated with Microservice */}
+      {showMap && authToken && (
+        <MapWidget
+          token={authToken}
+          onClose={() => setShowMap(false)}
+        />
       )}
     </div>
   );
