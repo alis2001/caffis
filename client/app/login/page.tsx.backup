@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Phone, Eye, EyeOff, User, Lock, ArrowRight, Shield, LogIn, RefreshCw } from "lucide-react";
 
-// Your existing login component - EXACTLY as it is
-function LoginPageContent() {
+export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -605,34 +604,5 @@ function LoginPageContent() {
         </AnimatePresence>
       </div>
     </div>
-  );
-}
-
-// Simple loading fallback that matches your design
-function LoginPageFallback() {
-  return (
-    <div className="min-h-screen bg-apple-mesh">
-      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
-        <div className="card-apple p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-            <motion.div
-              className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            />
-          </div>
-          <p className="text-gray-600">Caricamento...</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Main component - ONLY CHANGE: Added Suspense wrapper
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<LoginPageFallback />}>
-      <LoginPageContent />
-    </Suspense>
   );
 }

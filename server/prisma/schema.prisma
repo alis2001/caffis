@@ -1,4 +1,4 @@
-// server/prisma/schema.prisma
+// server/prisma/schema.prisma - CORRECTED for Alpine Linux
 
 datasource db {
   provider = "postgresql"
@@ -7,7 +7,8 @@ datasource db {
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  // FIXED: Use linux-musl for Alpine Linux containers
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 model User {
@@ -20,11 +21,11 @@ model User {
   password          String
   bio               String?
   profilePic        String?
-  
+
   // Verification fields
   isEmailVerified   Boolean            @default(false)
   isPhoneVerified   Boolean            @default(false)
-  
+
   // Onboarding preferences (UPDATED with standardized fields)
   onboardingCompleted Boolean          @default(false)
   ageRange            String?          // "18-24", "25-34", etc.
@@ -36,13 +37,13 @@ model User {
   timePreference      String?          // "spontaneous", "flexible", "planned"
   socialGoals         String?          // "friendship", "networking", "fun", "learning"
   meetingFrequency    String?          // "daily", "weekly", "biweekly", "monthly"
-  
+
   // Relations
   invites           Invite[]           @relation("HostInvites")
   requests          Request[]
   verificationCodes VerificationCode[]
   preferences       UserPreferences[]  // NEW relation
-  
+
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }

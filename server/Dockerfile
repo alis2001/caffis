@@ -1,49 +1,107 @@
-# Stage 1: Builder
-FROM node:18-alpine AS builder
+# server/Dockerfile - FINAL FIX with proper permissions
+
+FROM node:18-alpine AS base
+
+# Install system dependencies for Prisma and Alpine
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    curl \
+    openssl \
+    libc6-compat
+
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# ============================================
+# DEVELOPMENT STAGE
+# ============================================
+FROM base AS development
 
-# Copy package files
+# Create non-root user FIRST
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copy package files as root, then change ownership
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install all dependencies
+# Install dependencies as root
 RUN npm ci
 
-# Generate Prisma client
-RUN npx prisma generate
+# CRITICAL: Set environment variables for Prisma
+ENV PRISMA_CLI_BINARY_TARGETS="linux-musl-openssl-3.0.x"
+ENV PRISMA_CLIENT_ENGINE_TYPE="binary"
+
+# Generate Prisma client as root
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Copy source code
 COPY . .
 
-# Stage 2: Production
-FROM node:18-alpine AS production
-WORKDIR /app
+# Create healthcheck script
+RUN echo '#!/bin/sh\ncurl -f http://localhost:5000/health || exit 1' > /app/healthcheck.sh && \
+    chmod +x /app/healthcheck.sh
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+# CRITICAL: Change ownership of ALL files to nodejs user AFTER everything is installed
+RUN chown -R nodejs:nodejs /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install production dependencies only
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy built application and Prisma client
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/prisma ./prisma
-COPY --chown=nodejs:nodejs . .
-
-# Switch to non-root user
+# Switch to non-root user for runtime
 USER nodejs
 
 EXPOSE 5000
+EXPOSE 5555
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-  CMD node healthcheck.js || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD /app/healthcheck.sh
+
+CMD ["npm", "run", "dev"]
+
+# ============================================
+# PRODUCTION STAGE
+# ============================================
+FROM base AS production
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copy package files and Prisma schema
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies as root
+RUN npm ci
+
+# CRITICAL: Set environment variables for Prisma
+ENV PRISMA_CLI_BINARY_TARGETS="linux-musl-openssl-3.0.x"
+ENV PRISMA_CLIENT_ENGINE_TYPE="binary"
+
+# Generate Prisma client as root
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Remove dev dependencies
+RUN npm prune --production
+
+# Copy application code
+COPY . .
+
+# Create healthcheck script
+RUN echo '#!/bin/sh\ncurl -f http://localhost:5000/health || exit 1' > /app/healthcheck.sh && \
+    chmod +x /app/healthcheck.sh
+
+# CRITICAL: Change ownership of ALL files to nodejs user AFTER everything is done
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user for runtime
+USER nodejs
+
+EXPOSE 5000
+EXPOSE 5555
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD /app/healthcheck.sh
 
 CMD ["node", "app.js"]

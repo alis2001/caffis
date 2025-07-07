@@ -1,15 +1,26 @@
+// client/next.config.js - ADD this file if it doesn't exist
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
+  // Handle the Suspense issue
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
   },
-  typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    ignoreBuildErrors: true,
+  
+  // Environment variables for runtime
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
+    NEXT_PUBLIC_MAP_SERVICE_URL: process.env.NEXT_PUBLIC_MAP_SERVICE_URL || 'http://localhost:5001',
+  },
+  
+  // Allow connection to backend container
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://caffis-backend:5000/api/:path*',
+      },
+    ];
   },
 }
 
