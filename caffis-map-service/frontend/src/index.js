@@ -1,4 +1,8 @@
+import React from 'react';
 import SimpleMapWidget from './components/SimpleMapWidget';
+
+// Ensure the component is properly exported
+console.log('📦 Loading SimpleMapWidget:', typeof SimpleMapWidget);
 
 // Main export object
 const CaffisMapWidget = {
@@ -10,16 +14,22 @@ const CaffisMapWidget = {
 export default CaffisMapWidget;
 export { SimpleMapWidget as DraggableMapWidget };
 
-// Ensure global availability
+// Ensure global availability for UMD
 if (typeof window !== 'undefined') {
   window.CaffisMapWidget = CaffisMapWidget;
   
-  // Also expose individual components
+  // Also expose individual components directly
   window.CaffisMapWidget.DraggableMapWidget = SimpleMapWidget;
   window.CaffisMapWidget.SimpleMapWidget = SimpleMapWidget;
   
-  // Debug logging
-  console.log('✅ CaffisMapWidget exposed globally:', window.CaffisMapWidget);
+  // Direct access for debugging
+  window.SimpleMapWidget = SimpleMapWidget;
+  
+  console.log('✅ CaffisMapWidget exposed globally:', {
+    CaffisMapWidget: typeof window.CaffisMapWidget,
+    SimpleMapWidget: typeof window.CaffisMapWidget?.SimpleMapWidget,
+    DirectSimpleMapWidget: typeof window.SimpleMapWidget
+  });
 }
 
 // Return the main object for UMD

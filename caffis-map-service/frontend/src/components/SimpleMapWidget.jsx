@@ -7,11 +7,13 @@ class SimpleMapWidget extends React.Component {
       isMinimized: false,
       mapLoaded: false,
       error: null,
-      isOpening: true, // NEW: Animation state
+      isOpening: true,
       isDragging: false,
-      position: this.getCenterPosition(), // NEW: Center on screen
-      size: { width: 800, height: 600 }, // NEW: Larger default size
-      isResizing: false
+      position: this.getCenterPosition(),
+      size: { width: 800, height: 600 },
+      isResizing: false,
+      nearbyUsers: 0,
+      isConnected: false
     };
     this.mapContainer = React.createRef();
     this.widgetRef = React.createRef();
@@ -26,13 +28,10 @@ class SimpleMapWidget extends React.Component {
     };
   }
 
-  // NEW: Calculate center position of screen
-  // Replace the getCenterPosition function with:
   getCenterPosition() {
     const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
     
-    // Account for main app header (typically around 80px)
     const headerHeight = 80;
     const availableHeight = screenHeight - headerHeight;
     
@@ -43,16 +42,23 @@ class SimpleMapWidget extends React.Component {
   }
 
   componentDidMount() {
-    // Enhanced opening animation
+    // Check if we're in embedded mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEmbedded = urlParams.get('embed') === 'true';
+    const token = urlParams.get('token');
+
+    if (isEmbedded) {
+      // Set up communication with parent dashboard
+      this.setupEmbeddedMode(token);
+    }
+
     setTimeout(() => {
       this.setState({ isOpening: false });
-      // Initialize map after animation
       setTimeout(() => {
         this.initializeMap();
       }, 300);
-    }, 100); // Reduced delay for faster opening
+    }, 100);
 
-    // Add event listeners for dragging
     document.addEventListener('mousemove', this.handleMouseMove);
     document.addEventListener('mouseup', this.handleMouseUp);
     window.addEventListener('resize', this.handleWindowResize);
@@ -67,14 +73,57 @@ class SimpleMapWidget extends React.Component {
     window.removeEventListener('resize', this.handleWindowResize);
   }
 
-  // NEW: Handle window resize to keep widget centered
+  setupEmbeddedMode = (token) => {
+    // Listen for messages from parent dashboard
+    const handleMessage = (event) => {
+      if (event.origin !== 'http://localhost:3000') return;
+      
+      const { type, token: parentToken } = event.data;
+      
+      if (type === 'INIT' && parentToken) {
+        console.log('🗺️ Received token from dashboard:', parentToken);
+        this.connectToMapService(parentToken);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Send status updates to parent dashboard
+    this.sendStatusToParent = (type, data) => {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type, data }, 'http://localhost:3000');
+      }
+    };
+
+    // Initialize with token if provided
+    if (token) {
+      this.connectToMapService(token);
+    }
+  };
+
+  connectToMapService = (token) => {
+    // Simulate connection to map backend service
+    console.log('🔌 Connecting to map service with token:', token);
+    
+    setTimeout(() => {
+      this.setState({ 
+        isConnected: true,
+        nearbyUsers: Math.floor(Math.random() * 15) + 3
+      });
+      
+      if (this.sendStatusToParent) {
+        this.sendStatusToParent('CONNECTION_STATUS', { connected: true });
+        this.sendStatusToParent('USERS_UPDATE', { count: this.state.nearbyUsers });
+      }
+    }, 1000);
+  };
+
   handleWindowResize = () => {
     if (!this.state.isDragging) {
       this.setState({ position: this.getCenterPosition() });
     }
   }
 
-  // NEW: Enhanced dragging functionality
   handleMouseDown = (e) => {
     if (e.target.closest('.map-controls')) return;
     
@@ -101,7 +150,7 @@ class SimpleMapWidget extends React.Component {
       this.dragState.startPosX + deltaX
     ));
     const newY = Math.max(0, Math.min(
-      window.innerHeight - 60, // Account for header
+      window.innerHeight - 60,
       this.dragState.startPosY + deltaY
     ));
 
@@ -117,7 +166,6 @@ class SimpleMapWidget extends React.Component {
     }
   }
 
-  // Keep existing map initialization with improvements
   initializeMap() {
     try {
       if (!window.mapboxgl || !this.mapContainer.current) {
@@ -126,6 +174,7 @@ class SimpleMapWidget extends React.Component {
       }
 
       const tokens = [
+        'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', // Public Mapbox token
         'pk.eyJ1IjoiYWxpczIwMDEiLCJhIjoiY21jcnNjODFoMHIybTJrcXNuYWw1NXZlYiJ9.dqmeeyoou2m-BngWFzG2Lw',
         'pk.eyJ1IjoiYWxpc2Jhc3NhbSIsImEiOiJjbHJ3aTQyYmgwNGRqMmxvNGEwNGU5MmV3In0.IkJDe4u1S4hEqMNLSUCkyA'
       ];
@@ -143,101 +192,342 @@ class SimpleMapWidget extends React.Component {
       return;
     }
 
-    const token = tokens[index];
-    window.mapboxgl.accessToken = token;
+    const currentToken = tokens[index];
+    console.log(`🗺️ Trying Mapbox token ${index + 1}/${tokens.length}...`);
 
     try {
-      this.map = new window.mapboxgl.Map({
+      window.mapboxgl.accessToken = currentToken;
+      
+      const map = new window.mapboxgl.Map({
         container: this.mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [7.6869, 45.0703],
-        zoom: 13
+        style: 'mapbox://styles/mapbox/streets-v12', // Updated style
+        center: [14.2681, 40.8518], // Naples coordinates
+        zoom: 12, // Good zoom level for Naples
+        attributionControl: false,
+        maxZoom: 18,
+        minZoom: 10
       });
 
-      this.map.on('load', () => {
-        console.log(`✅ Map loaded successfully`);
+      // Add navigation controls
+      map.addControl(new window.mapboxgl.NavigationControl({
+        showCompass: true,
+        showZoom: true,
+        visualizePitch: false
+      }), 'top-right');
+
+      map.on('load', () => {
+        console.log('✅ Naples map loaded successfully with token', index + 1);
         this.setState({ mapLoaded: true });
         
-        this.map.addControl(new window.mapboxgl.NavigationControl());
+        // Add markers after map loads
+        setTimeout(() => {
+          this.addSampleMarkers(map);
+        }, 500);
         
-        new window.mapboxgl.Marker({ color: '#FF6B6B' })
-          .setLngLat([7.6869, 45.0703])
-          .setPopup(new window.mapboxgl.Popup().setHTML('<h3>🏛️ Turin</h3><p>Welcome to Caffis!</p>'))
-          .addTo(this.map);
+        // Notify parent if in embedded mode
+        if (this.sendStatusToParent) {
+          this.sendStatusToParent('MAP_LOADED', { loaded: true });
+          this.sendStatusToParent('USERS_UPDATE', { count: 5 });
+        }
       });
 
-      this.map.on('error', (e) => {
-        console.warn(`❌ Map error with token ${index + 1}:`, e);
-        if (this.map) {
-          this.map.remove();
-          this.map = null;
-        }
-        setTimeout(() => {
+      map.on('error', (e) => {
+        console.error(`❌ Token ${index + 1} failed:`, e);
+        if (index < tokens.length - 1) {
           this.tryMapWithTokens(tokens, index + 1);
-        }, 1000);
+        } else {
+          this.setState({ error: 'All Mapbox tokens failed' });
+        }
       });
+
+      // Store map reference
+      this.map = map;
 
     } catch (error) {
-      console.warn(`❌ Failed to create map with token ${index + 1}:`, error);
-      setTimeout(() => {
+      console.error(`❌ Token ${index + 1} failed:`, error);
+      if (index < tokens.length - 1) {
         this.tryMapWithTokens(tokens, index + 1);
-      }, 1000);
+      } else {
+        this.setState({ error: 'All Mapbox tokens failed' });
+      }
     }
   }
 
-  toggleMinimize = () => {
-    const newMinimized = !this.state.isMinimized;
-    this.setState({ 
-      isMinimized: newMinimized,
-      size: newMinimized 
-        ? { width: 300, height: 60 }
-        : { width: 800, height: 600 }
-    }, () => {
-      if (this.map && !newMinimized) {
-        setTimeout(() => {
-          this.map.resize();
-        }, 300);
-      }
+  addSampleMarkers(map) {
+    // Sample users nearby NAPLES
+    const sampleUsers = [
+      { id: 1, name: 'Marco', lng: 14.2681, lat: 40.8518, status: 'available' },
+      { id: 2, name: 'Sofia', lng: 14.2650, lat: 40.8540, status: 'busy' },
+      { id: 3, name: 'Alice', lng: 14.2710, lat: 40.8490, status: 'available' },
+      { id: 4, name: 'Luca', lng: 14.2620, lat: 40.8560, status: 'available' },
+      { id: 5, name: 'Giulia', lng: 14.2750, lat: 40.8480, status: 'available' }
+    ];
+
+    sampleUsers.forEach(user => {
+      const el = document.createElement('div');
+      el.style.cssText = `
+        width: 35px;
+        height: 35px;
+        background: ${user.status === 'available' ? '#4CAF50' : '#FF9800'};
+        border: 3px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: all 0.2s ease;
+        z-index: 1000;
+      `;
+      el.innerHTML = '☕';
+      el.title = `${user.name} - ${user.status === 'available' ? 'Disponibile per caffè' : 'Occupato'}`;
+
+      el.addEventListener('click', () => {
+        alert(`Vuoi incontrare ${user.name} per un caffè?`);
+      });
+
+      el.addEventListener('mouseenter', () => {
+        el.style.transform = 'scale(1.3)';
+        el.style.zIndex = '2000';
+      });
+
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = 'scale(1)';
+        el.style.zIndex = '1000';
+      });
+
+      new window.mapboxgl.Marker(el)
+        .setLngLat([user.lng, user.lat])
+        .addTo(map);
+    });
+
+    // Add NAPLES coffee shops
+    const coffeeShops = [
+      { name: 'Caffè Gambrinus', lng: 14.2492, lat: 40.8359 }, // Famous historic café
+      { name: 'Gran Caffè La Caffettiera', lng: 14.2681, lat: 40.8518 },
+      { name: 'Caffè del Professore', lng: 14.2515, lat: 40.8389 },
+      { name: 'Caffè Centrale', lng: 14.2580, lat: 40.8450 },
+      { name: 'Bar Nilo', lng: 14.2553, lat: 40.8472 } // Famous for Maradona shrine
+    ];
+
+    coffeeShops.forEach(shop => {
+      const el = document.createElement('div');
+      el.style.cssText = `
+        width: 30px;
+        height: 30px;
+        background: #8B4513;
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        transition: all 0.2s ease;
+      `;
+      el.innerHTML = '🏪';
+      el.title = shop.name;
+
+      el.addEventListener('click', () => {
+        alert(`Vai a ${shop.name}?`);
+      });
+
+      el.addEventListener('mouseenter', () => {
+        el.style.transform = 'scale(1.2)';
+      });
+
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = 'scale(1)';
+      });
+
+      new window.mapboxgl.Marker(el)
+        .setLngLat([shop.lng, shop.lat])
+        .addTo(map);
     });
   }
 
-  handleClose = () => {
-    if (this.props.onClose) {
-      this.props.onClose();
-    }
+  toggleMinimize = () => {
+    this.setState({ isMinimized: !this.state.isMinimized });
   }
 
   render() {
-    const { isMinimized, mapLoaded, error, isOpening, isDragging, position, size } = this.state;
+    const { isMinimized, mapLoaded, error, isOpening, isDragging, nearbyUsers, isConnected } = this.state;
 
+    // Check if we're in embedded mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEmbedded = urlParams.get('embed') === 'true';
+    
+    if (isEmbedded) {
+      return (
+        <div style={{
+          width: '100vw',
+          height: '100vh',
+          margin: 0,
+          padding: 0,
+          position: 'relative',
+          overflow: 'hidden',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          backgroundColor: '#f8f9fa' // Prevent white background
+        }}>
+          {error ? (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              color: '#e74c3c',
+              fontSize: '18px',
+              zIndex: 1000
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Errore Caricamento Mappa</div>
+              <div style={{ fontSize: '14px', marginBottom: '16px', color: '#666' }}>{error}</div>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                🔄 Riprova
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Loading overlay for embedded mode */}
+              {!mapLoaded && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(255,255,255,0.95)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  flexDirection: 'column'
+                }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    border: '4px solid #f3f4f6',
+                    borderTop: '4px solid #3b82f6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    marginBottom: '24px'
+                  }} />
+                  <div style={{ 
+                    color: '#1f2937', 
+                    fontSize: '18px', 
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    marginBottom: '8px'
+                  }}>
+                    Caricamento Caffis Map
+                  </div>
+                  <div style={{ 
+                    color: '#6b7280', 
+                    fontSize: '14px',
+                    textAlign: 'center'
+                  }}>
+                    Connessione al servizio mappa...
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: '16px',
+                    gap: '4px'
+                  }}>
+                    <div style={{
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '50%',
+                      animation: 'bounce 1.4s ease-in-out infinite both'
+                    }}></div>
+                    <div style={{
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '50%',
+                      animation: 'bounce 1.4s ease-in-out 0.16s infinite both'
+                    }}></div>
+                    <div style={{
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '50%',
+                      animation: 'bounce 1.4s ease-in-out 0.32s infinite both'
+                    }}></div>
+                  </div>
+                  <style>{`
+                    @keyframes spin {
+                      0% { transform: rotate(0deg); }
+                      100% { transform: rotate(360deg); }
+                    }
+                    @keyframes bounce {
+                      0%, 80%, 100% { 
+                        transform: scale(0);
+                      } 40% { 
+                        transform: scale(1.0);
+                      }
+                    }
+                  `}</style>
+                </div>
+              )}
+              
+              {/* Map container fills entire viewport in embedded mode */}
+              <div 
+                ref={this.mapContainer}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: mapLoaded ? 'block' : 'none'
+                }}
+              />
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // STANDALONE MODE: Return draggable widget (for development)
     const widgetStyle = {
-    position: 'fixed',
-    top: `${position.y}px`,
-    left: `${position.x}px`,
-    width: `${size.width}px`,
-    height: `${size.height}px`,
-    backgroundColor: 'white',
-    borderRadius: '20px', // Increased for more modern look
-    boxShadow: isDragging 
-      ? '0 35px 60px rgba(0,0,0,0.3)' 
-      : '0 25px 50px rgba(0,0,0,0.2)',
-    zIndex: 1000,
-    overflow: 'hidden',
-    border: '2px solid rgba(255,255,255,0.8)',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    cursor: isDragging ? 'grabbing' : 'auto',
-    // Enhanced opening animation
-    transform: isOpening 
-      ? 'scale(0.1) rotate(-5deg)' 
-      : 'scale(1) rotate(0deg)',
-    opacity: isOpening ? 0 : 1,
-    transition: isOpening 
-      ? 'none' 
-      : 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-    transformOrigin: 'center center',
-    // Add backdrop blur effect when dragging
-    backdropFilter: isDragging ? 'blur(1px)' : 'none'
-  };
+      position: 'fixed',
+      left: this.state.position.x,
+      top: this.state.position.y,
+      width: this.state.size.width,
+      height: this.state.size.height,
+      backgroundColor: 'white',
+      borderRadius: '16px',
+      boxShadow: isDragging 
+        ? '0 25px 50px rgba(0,0,0,0.25)' 
+        : '0 20px 40px rgba(0,0,0,0.15)',
+      zIndex: 1000,
+      overflow: 'hidden',
+      cursor: isDragging ? 'grabbing' : 'auto',
+      transform: isOpening 
+        ? 'scale(0.1) rotate(-5deg)' 
+        : 'scale(1) rotate(0deg)',
+      opacity: isOpening ? 0 : 1,
+      transition: isOpening 
+        ? 'none' 
+        : 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+      transformOrigin: 'center center',
+      backdropFilter: isDragging ? 'blur(1px)' : 'none'
+    };
 
     const headerStyle = {
       padding: '12px 16px',
@@ -266,51 +556,6 @@ class SimpleMapWidget extends React.Component {
       position: 'relative'
     };
 
-    // NEW: Beautiful loading spinner component
-    const LoadingSpinner = () => (
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10,
-        flexDirection: 'column'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '3px solid #f3f4f6',
-          borderTop: '3px solid #3b82f6',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: '16px'
-        }} />
-        <div style={{ 
-          color: '#6b7280', 
-          fontSize: '14px', 
-          fontWeight: '500',
-          textAlign: 'center'
-        }}>
-          Loading interactive map...
-          <br />
-          <span style={{ fontSize: '12px', opacity: 0.7 }}>
-            Trying Mapbox tokens...
-          </span>
-        </div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-
     return (
       <div 
         ref={this.widgetRef}
@@ -335,15 +580,15 @@ class SimpleMapWidget extends React.Component {
               onClick={this.toggleMinimize}
               title={isMinimized ? 'Expand' : 'Minimize'}
             >
-              {isMinimized ? '⬆️' : '⬇️'}
+              {isMinimized ? '📖' : '📕'}
             </button>
             <button
               style={{ 
                 ...buttonStyle, 
-                backgroundColor: '#ef4444', 
+                backgroundColor: '#dc3545', 
                 color: 'white' 
               }}
-              onClick={this.handleClose}
+              onClick={() => console.log('Close')}
               title="Close"
             >
               ✕
@@ -356,35 +601,38 @@ class SimpleMapWidget extends React.Component {
           <div style={contentStyle}>
             {error ? (
               <div style={{
-                padding: '20px',
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
                 textAlign: 'center',
-                color: '#dc2626',
-                backgroundColor: '#fef2f2',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column'
+                color: '#e74c3c'
               }}>
-                <div style={{ fontSize: '32px', marginBottom: '16px' }}>❌</div>
-                <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '16px' }}>Map Error</div>
-                <div style={{ fontSize: '14px', marginBottom: '16px', opacity: 0.8 }}>{error}</div>
-                <button 
-                  onClick={() => { this.setState({ error: null }); this.initializeMap(); }}
-                  style={{ 
-                    ...buttonStyle, 
-                    backgroundColor: '#3b82f6', 
-                    color: 'white',
-                    padding: '8px 16px'
-                  }}
-                >
-                  🔄 Retry
-                </button>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚠️</div>
+                <div style={{ marginBottom: '8px' }}>Map Error</div>
+                <div style={{ fontSize: '12px', color: '#666' }}>{error}</div>
               </div>
             ) : (
               <>
-                {!mapLoaded && <LoadingSpinner />}
-                <div ref={this.mapContainer} style={{ height: '100%', width: '100%' }} />
+                {!mapLoaded && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center'
+                  }}>
+                    <div>🔄 Loading map...</div>
+                  </div>
+                )}
+                <div 
+                  ref={this.mapContainer}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: mapLoaded ? 'block' : 'none'
+                  }}
+                />
               </>
             )}
           </div>
@@ -394,4 +642,11 @@ class SimpleMapWidget extends React.Component {
   }
 }
 
+// At the very end of SimpleMapWidget.jsx file
 export default SimpleMapWidget;
+
+// Also add this for immediate global exposure
+if (typeof window !== 'undefined') {
+  window.SimpleMapWidget = SimpleMapWidget;
+  console.log('🗺️ SimpleMapWidget exposed directly to window');
+}

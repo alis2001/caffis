@@ -3,166 +3,284 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Caffis Map Widget - Development</title>
+    <title>Caffis Map Widget</title>
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
     <style>
-        body { 
-            margin: 0; 
-            padding: 20px; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        #root {
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        /* Mapbox overrides for seamless integration */
+        .mapboxgl-map {
+            font-family: inherit;
+        }
+        
+        .mapboxgl-canvas {
+            outline: none;
+        }
+        
+        .mapboxgl-control-container {
+            position: absolute;
+        }
+        
+        /* Custom loading animation */
+        .loading-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 9999;
         }
-        .container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            background: white; 
-            border-radius: 20px; 
-            padding: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-        .status { 
-            padding: 15px; 
-            border-radius: 10px; 
-            margin: 10px 0; 
+        
+        .loading-content {
             text-align: center;
-            font-weight: 600;
         }
-        .loading { background: #fff3cd; color: #856404; }
-        .error { background: #f8d7da; color: #721c24; }
-        .success { background: #d4edda; color: #155724; }
-        .info { background: #d1ecf1; color: #0c5460; }
-        #root { min-height: 400px; }
-        .debug { font-family: monospace; font-size: 12px; background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🗺️ Caffis Map Widget - Development Mode</h1>
-        <div id="status" class="status loading">⏳ Loading dependencies...</div>
-        <div id="debug" class="debug">Debug: Starting...</div>
-        <div id="info" class="status info">
-            <strong>Development Info:</strong><br>
-            Widget URL: <code>http://localhost:3002</code><br>
-            Main App: <code>http://localhost:3000</code>
+    <!-- Loading screen -->
+    <div id="loading" class="loading-container">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h2>Caffis Map</h2>
+            <p>Loading interactive map experience...</p>
         </div>
-        <div id="root"></div>
     </div>
     
-    <!-- Load external dependencies first -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- React app container -->
+    <div id="root"></div>
+    
+    <!-- Load dependencies in order -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
     
     <script>
-        const debug = document.getElementById('debug');
-        const status = document.getElementById('status');
+        console.log('🗺️ Caffis Map Widget - Starting...');
         
-        const log = (message) => {
-            console.log(message);
-            debug.innerHTML += message + '<br>';
+        // Global configuration
+        window.CAFFIS_MAP_CONFIG = {
+            version: '1.0.0',
+            environment: 'development',
+            apiUrl: 'http://localhost:5001',
+            socketUrl: 'http://localhost:5001'
         };
         
-        const checkDependencies = () => {
-            log('Checking dependencies...');
+        // Extract URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const isEmbedded = urlParams.get('embed') === 'true';
+        const token = urlParams.get('token');
+        const theme = urlParams.get('theme') || 'light';
+        
+        console.log('📊 Mode:', isEmbedded ? 'Embedded' : 'Standalone');
+        console.log('🎨 Theme:', theme);
+        if (token) console.log('🔑 Token received:', token.substring(0, 20) + '...');
+        
+        // Enhanced dependency checking
+        function checkDependencies() {
+            const status = document.getElementById('status');
             
+            console.log('🔍 Checking dependencies...');
+            
+            // Check React
             if (typeof React === 'undefined') {
-                status.className = 'status error';
-                status.innerHTML = '❌ React failed to load';
+                console.error('❌ React not loaded');
                 return false;
             }
-            log('✅ React loaded: ' + React.version);
+            console.log('✅ React loaded');
             
+            // Check ReactDOM
             if (typeof ReactDOM === 'undefined') {
-                status.className = 'status error';
-                status.innerHTML = '❌ ReactDOM failed to load';
+                console.error('❌ ReactDOM not loaded');
                 return false;
             }
-            log('✅ ReactDOM loaded');
+            console.log('✅ ReactDOM loaded');
             
+            // Check Mapbox
             if (typeof mapboxgl === 'undefined') {
-                status.className = 'status error';
-                status.innerHTML = '❌ Mapbox failed to load';
+                console.error('❌ Mapbox GL not loaded');
                 return false;
             }
-            log('✅ Mapbox loaded: ' + mapboxgl.version);
-            
-            // Make available globally
-            window.React = React;
-            window.ReactDOM = ReactDOM;
-            window.mapboxgl = mapboxgl;
-            
-            status.className = 'status success';
-            status.innerHTML = '✅ Dependencies loaded, loading widget...';
+            console.log('✅ Mapbox GL loaded');
             
             return true;
-        };
+        }
         
-        const loadWidget = () => {
-            log('Loading widget script...');
+        // Load and initialize widget
+        function initializeWidget() {
+            if (!checkDependencies()) {
+                setTimeout(initializeWidget, 100);
+                return;
+            }
             
+            console.log('🚀 Initializing widget...');
+            
+            // Hide loading screen
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.classList.add('fade-out');
+                setTimeout(() => loading.remove(), 500);
+            }
+            
+            // Load the widget script
             const script = document.createElement('script');
             script.src = '/caffis-map-widget.js';
             script.onload = () => {
-                log('Widget script loaded, checking global...');
-                checkWidget();
+                console.log('📦 Widget script loaded');
+                renderWidget();
             };
             script.onerror = () => {
-                log('❌ Failed to load widget script');
-                status.className = 'status error';
-                status.innerHTML = '❌ Failed to load widget script';
+                console.error('❌ Failed to load widget script');
+                showError('Failed to load map widget');
             };
             
             document.head.appendChild(script);
-        };
+        }
         
-        const checkWidget = () => {
-            log('Checking for CaffisMapWidget...');
+        // Render the widget
+        // Render the widget
+        function renderWidget() {
+            console.log('🎨 Rendering widget...');
             
-            // Check what's available globally
-            log('window.CaffisMapWidget: ' + typeof window.CaffisMapWidget);
-            if (window.CaffisMapWidget) {
-                log('CaffisMapWidget keys: ' + Object.keys(window.CaffisMapWidget));
-            }
-            
-            if (window.CaffisMapWidget && window.CaffisMapWidget.DraggableMapWidget) {
-                try {
-                    log('Rendering widget...');
-                    
-                    const container = document.getElementById('root');
-                    const root = ReactDOM.createRoot(container);
-                    const MapWidget = window.CaffisMapWidget.DraggableMapWidget;
+            try {
+                const container = document.getElementById('root');
+                const root = ReactDOM.createRoot(container);
+                
+                // Check multiple ways the widget might be available
+                let MapWidget = null;
+                
+                if (window.SimpleMapWidget) {
+                    console.log('✅ Found SimpleMapWidget directly');
+                    MapWidget = window.SimpleMapWidget;
+                } else if (window.CaffisMapWidget && window.CaffisMapWidget.SimpleMapWidget) {
+                    console.log('✅ Found SimpleMapWidget in CaffisMapWidget');
+                    MapWidget = window.CaffisMapWidget.SimpleMapWidget;
+                } else if (window.CaffisMapWidget && window.CaffisMapWidget.DraggableMapWidget) {
+                    console.log('✅ Found DraggableMapWidget in CaffisMapWidget');
+                    MapWidget = window.CaffisMapWidget.DraggableMapWidget;
+                }
+                
+                if (MapWidget) {
+                    console.log('🎯 Creating React element with widget');
                     
                     root.render(
                         React.createElement(MapWidget, {
-                            token: 'dev-token',
-                            onClose: () => log('Map widget closed'),
-                            initialPosition: { x: 50, y: 50 }
+                            token: token,
+                            theme: theme,
+                            embedded: isEmbedded,
+                            onLoad: () => console.log('✅ Widget rendered successfully'),
+                            onError: (error) => console.error('❌ Widget error:', error)
                         })
                     );
                     
-                    status.className = 'status success';
-                    status.innerHTML = '✅ Map widget loaded successfully!';
-                    log('✅ Widget rendered successfully');
-                    
-                } catch (error) {
-                    log('❌ Error rendering widget: ' + error.message);
-                    status.className = 'status error';
-                    status.innerHTML = '❌ Error: ' + error.message;
+                    console.log('🎉 Map widget initialized successfully!');
+                } else {
+                    console.error('❌ No widget found. Available:', {
+                        window_CaffisMapWidget: typeof window.CaffisMapWidget,
+                        window_SimpleMapWidget: typeof window.SimpleMapWidget,
+                        CaffisMapWidget_keys: window.CaffisMapWidget ? Object.keys(window.CaffisMapWidget) : 'undefined'
+                    });
+                    throw new Error('Widget not found in any expected location');
                 }
-            } else {
-                log('❌ CaffisMapWidget.DraggableMapWidget not found');
-                status.className = 'status error';
-                status.innerHTML = '❌ Widget not properly exported';
+                
+            } catch (error) {
+                console.error('❌ Error rendering widget:', error);
+                showError('Error initializing map: ' + error.message);
             }
-        };
+        }
         
-        // Start the loading process
-        setTimeout(() => {
-            if (checkDependencies()) {
-                loadWidget();
+        // Show error state
+        function showError(message) {
+            const container = document.getElementById('root');
+            container.innerHTML = `
+                <div style="
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    text-align: center;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                ">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                    <h3 style="color: #e74c3c; margin-bottom: 8px;">Map Service Error</h3>
+                    <p style="color: #666; margin-bottom: 16px;">${message}</p>
+                    <button onclick="window.location.reload()" style="
+                        padding: 12px 24px;
+                        background: #e74c3c;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">
+                        🔄 Retry
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Global error handler
+        window.addEventListener('error', (event) => {
+            console.error('🚨 Global error:', event.error);
+            if (event.error && event.error.message && event.error.message.includes('mapbox')) {
+                showError('Mapbox token error - please check configuration');
             }
-        }, 1000);
+        });
+        
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeWidget);
+        } else {
+            initializeWidget();
+        }
+        
+        console.log('📋 Caffis Map Widget initialized');
     </script>
 </body>
 </html>
