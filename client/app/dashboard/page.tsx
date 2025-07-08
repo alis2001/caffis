@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useRequireAuth } from "@/contexts/AuthContext";
 import { Coffee, Users, MapPin, Calendar, User, MessageCircle, Settings, Bell, Plus, X, Minimize2, Maximize2, Move } from "lucide-react";
+import dynamic from 'next/dynamic';
 
 // Apple WWDC 2025 inspired components
 const AppleButton = ({ 

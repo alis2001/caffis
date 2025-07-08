@@ -97,7 +97,8 @@ services:
       - JWT_SECRET=caffis_jwt_secret_2024_super_secure_key_xY9mN3pQ7rT2wK5vL8bC
       - FRONTEND_URL=http://localhost:3000
       - MAIN_API_URL=http://backend:5000
-      - MAPBOX_ACCESS_TOKEN=sk.eyJ1IjoiYWxpczIwMDEiLCJhIjoiY21jdGJ2anhiMDBhdjJtc2tmZ3l6cDJoZiJ9.cKgVNa3LFwSTGXmVFunDlg
+      - MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoiYWxpczIwMDEiLCJhIjoiY21jdTdoN21qMGRvcTJscjN2aWJ4ZnZsbSJ9.dFM6t9IEITh6l9cI8DrYqQ
+      - GOOGLE_PLACES_API_KEY=AIzaSyDD3X_K3n9WM6WpZCg40QA_hZqxK3HUDsQ
       - ./caffis-map-service/backend:/app
       - /app/node_modules
     depends_on:
@@ -117,7 +118,7 @@ services:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
       - REACT_APP_MAP_API_URL=http://localhost:5001
-      - REACT_APP_MAPBOX_TOKEN=sk.eyJ1IjoiYWxpczIwMDEiLCJhIjoiY21jdGJ2anhiMDBhdjJtc2tmZ3l6cDJoZiJ9.cKgVNa3LFwSTGXmVFunDlg
+      - REACT_APP_MAPBOX_TOKEN=pk.eyJ1IjoiYWxpczIwMDEiLCJhIjoiY21jdTdoN21qMGRvcTJscjN2aWJ4ZnZsbSJ9.dFM6t9IEITh6l9cI8DrYqQ
     volumes:
       - ./caffis-map-service/frontend:/app
       - /app/node_modules

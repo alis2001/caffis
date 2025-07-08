@@ -211,6 +211,64 @@ class MapAPI {
   /**
    * Send coffee invite
    */
+  /**
+   * Get Naples venues with Google Places data
+   */
+  async getNaplesVenues() {
+    try {
+      const response = await this.client.get('/venues/naples', {
+        params: {
+          includeGoogleData: true,
+          useCache: true
+        }
+      });
+      return response;
+    } catch (error) {
+      console.error('Error getting Naples venues:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get venue details by ID
+   */
+  async getVenueDetails(venueId) {
+    try {
+      const response = await this.client.get(`/venues/${venueId}/details`);
+      return response;
+    } catch (error) {
+      console.error('Error getting venue details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search venues by location
+   */
+  async searchVenues({ latitude, longitude, radius = 2000, type = 'cafe' }) {
+    try {
+      const params = { latitude, longitude, radius, type };
+      const response = await this.client.get('/venues/search', { params });
+      return response;
+    } catch (error) {
+      console.error('Error searching venues:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark venue as visited
+   */
+  async visitVenue(venueId) {
+    try {
+      const response = await this.client.post(`/venues/${venueId}/visit`);
+      return response;
+    } catch (error) {
+      console.error('Error marking venue as visited:', error);
+      throw error;
+    }
+  }
+  
   async sendCoffeeInvite({ toUserId, message, coffeeShopId, proposedTime, location }) {
     try {
       const response = await this.client.post('/invite', {
