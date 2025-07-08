@@ -101,47 +101,73 @@ const QuickAction = ({ title, icon, variant, onClick }) => {
 
 // Map Widget Component that integrates with the microservice
 // Enhanced Map Widget Component - keeps your exact styling but adds UX improvements
+// client/app/dashboard/page.tsx - CORRECTED MapWidget Component
+// Replace your existing MapWidget with this version
+
 const MapWidget = ({ token, onClose }) => {
-  // Your existing state + enhanced states
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [position, setPosition] = useState({ x: window.innerWidth - 450, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
-  
-  // NEW: Enhanced states for better UX
   const [mapLoading, setMapLoading] = useState(true);
   const [mapError, setMapError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [nearbyUsers, setNearbyUsers] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(true);
   
   const dragRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const iframeRef = useRef(null);
 
-  // NEW: Enhanced initialization with loading states
+  // CORRECTED: Use the proper URLs from your docker-compose setup
+  const MAP_BACKEND_URL = process.env.NEXT_PUBLIC_MAP_SERVICE_URL || 'http://localhost:5001';
+  const MAP_WIDGET_URL = process.env.NEXT_PUBLIC_MAP_WIDGET_URL || 'http://localhost:3002';
+
   useEffect(() => {
-    // Opening animation
-    const animationTimer = setTimeout(() => setIsAnimating(false), 600);
-    
-    // Simulate map service connection
-    const connectionTimer = setTimeout(() => {
-      setMapLoading(false);
-      setIsConnected(true);
-      setNearbyUsers(Math.floor(Math.random() * 12) + 3);
-    }, 2000);
-
-    return () => {
-      clearTimeout(animationTimer);
-      clearTimeout(connectionTimer);
+    // Test connection to map service backend first
+    const testConnection = async () => {
+      try {
+        setMapLoading(true);
+        
+        // Test backend health endpoint
+        console.log('🔍 Testing map backend connection...');
+        const healthResponse = await fetch(`${MAP_BACKEND_URL}/health`);
+        
+        if (healthResponse.ok) {
+          console.log('✅ Map backend is healthy');
+          setIsConnected(true);
+          setMapError(null);
+          
+          // Simulate nearby users data from backend
+          setNearbyUsers(Math.floor(Math.random() * 12) + 3);
+          
+          // Now test frontend widget availability
+          console.log('🔍 Testing map widget frontend...');
+          const widgetResponse = await fetch(MAP_WIDGET_URL);
+          
+          if (widgetResponse.ok) {
+            console.log('✅ Map widget frontend is available');
+          } else {
+            console.warn('⚠️ Map widget frontend not ready, but backend is healthy');
+          }
+        } else {
+          throw new Error(`Map backend health check failed: ${healthResponse.status}`);
+        }
+      } catch (error) {
+        console.error('❌ Map service connection error:', error);
+        setMapError(`Cannot connect to map service. Backend: ${MAP_BACKEND_URL}, Widget: ${MAP_WIDGET_URL}`);
+        setIsConnected(false);
+      } finally {
+        // Always stop loading after connection test
+        setTimeout(() => setMapLoading(false), 1500);
+      }
     };
-  }, []);
 
-  // Your existing drag handlers (enhanced)
+    testConnection();
+  }, [MAP_BACKEND_URL, MAP_WIDGET_URL]);
+
+  // Drag functionality (your existing code)
   const handleMouseDown = (e) => {
-    // Only allow dragging from header, not from map area
     if (!e.target.closest('.map-controls') && !e.target.closest('.bg-gradient-to-r')) return;
-    
     setIsDragging(true);
     dragStartPos.current = {
       x: e.clientX - position.x,
@@ -152,17 +178,14 @@ const MapWidget = ({ token, onClose }) => {
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
-    
-    // Enhanced drag with boundary constraints
     const newX = Math.max(0, Math.min(
-      window.innerWidth - (isMaximized ? window.innerWidth * 0.9 : 400),
+      window.innerWidth - (isMaximized ? window.innerWidth * 0.9 : 450),
       e.clientX - dragStartPos.current.x
     ));
     const newY = Math.max(0, Math.min(
-      window.innerHeight - (isMaximized ? window.innerHeight * 0.9 : 500),
+      window.innerHeight - (isMaximized ? window.innerHeight * 0.9 : 600),
       e.clientY - dragStartPos.current.y
     ));
-    
     setPosition({ x: newX, y: newY });
   };
 
@@ -181,34 +204,31 @@ const MapWidget = ({ token, onClose }) => {
     }
   }, [isDragging]);
 
-  // Your existing size logic
   const widgetSize = isMaximized 
     ? { width: '90vw', height: '90vh' } 
     : isMinimized 
     ? { width: '320px', height: '60px' }
     : { width: '450px', height: '600px' };
 
-  // NEW: Enhanced retry functionality
-  // NEW: Enhanced retry functionality
   const handleRetry = () => {
     setMapError(null);
     setMapLoading(true);
     setIsConnected(false);
     
-    // Reload the iframe
+    // Retry connection by reloading iframe
     if (iframeRef.current) {
-      iframeRef.current.src = iframeRef.current.src;
+      const widgetUrl = `${MAP_WIDGET_URL}?token=${encodeURIComponent(token)}&embed=true&theme=light&timestamp=${Date.now()}`;
+      iframeRef.current.src = widgetUrl;
     }
     
+    // Retest connection
     setTimeout(() => {
-      if (!isConnected) {
-        setMapError('Microservice timeout - check if map service is running on port 3002');
-        setMapLoading(false);
-      }
-    }, 5000);
+      const event = new Event('retry-connection');
+      window.dispatchEvent(event);
+    }, 100);
   };
 
-  // NEW: Beautiful Loading Component
+  // Enhanced Loading State Component
   const MapLoadingState = () => (
     <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center z-10">
       <div className="text-center">
@@ -219,10 +239,14 @@ const MapWidget = ({ token, onClose }) => {
         <h3 className="text-lg font-semibold text-gray-800 mb-2">
           Connessione a Caffis Map
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Caricamento mappa interattiva e amanti del caffè nelle vicinanze...
+        <p className="text-sm text-gray-600 mb-2">
+          Caricamento mappa interattiva...
         </p>
-        <div className="flex items-center justify-center space-x-1">
+        <div className="text-xs text-gray-500 space-y-1">
+          <div>Backend: {MAP_BACKEND_URL}</div>
+          <div>Widget: {MAP_WIDGET_URL}</div>
+        </div>
+        <div className="flex items-center justify-center space-x-1 mt-4">
           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-75"></div>
           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-150"></div>
@@ -231,262 +255,123 @@ const MapWidget = ({ token, onClose }) => {
     </div>
   );
 
-  // NEW: Error State Component
+  // Enhanced Error State Component
   const MapErrorState = () => (
     <div className="absolute inset-0 bg-red-50 flex items-center justify-center z-10">
       <div className="text-center p-6">
-        <div className="text-red-500 text-5xl mb-4">⚠️</div>
+        <div className="text-4xl mb-4">⚠️</div>
         <h3 className="text-lg font-semibold text-red-800 mb-2">
-          Connessione Fallita
+          Servizio Mappa Non Disponibile
         </h3>
-        <p className="text-sm text-red-600 mb-4">
-          Impossibile connettersi al servizio mappa
+        <p className="text-sm text-red-600 mb-4 max-w-sm">
+          {mapError || 'Il microservizio mappa non è raggiungibile'}
         </p>
-        <button
+        <div className="text-xs text-gray-600 mb-4 space-y-1">
+          <div>Verificare che i servizi siano attivi:</div>
+          <div className="font-mono bg-gray-100 p-2 rounded text-left">
+            docker-compose up map-backend map-frontend
+          </div>
+        </div>
+        <button 
           onClick={handleRetry}
-          className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors mx-auto"
+          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
         >
-          <span>🔄</span>
-          <span>Riprova</span>
+          Riprova Connessione
         </button>
       </div>
     </div>
   );
-  const tryGetDataFromIframe = useCallback(() => {
-    try {
-      const handleMessage = (event) => {
-        if (event.origin !== 'http://localhost:3002') return;
-        
-        const { type, data } = event.data;
-        
-        switch (type) {
-          case 'MAP_LOADED':
-            setIsConnected(true);
-            setMapLoading(false);
-            console.log('📍 Map loaded message received');
-            break;
-          case 'USERS_UPDATE':
-            setNearbyUsers(data.count || 0);
-            console.log('👥 Users update:', data.count);
-            break;
-          case 'CONNECTION_STATUS':
-            setIsConnected(data.connected);
-            console.log('🔌 Connection status:', data.connected);
-            break;
-          case 'ERROR':
-            setMapError(data.message);
-            console.log('❌ Error from map:', data.message);
-            break;
-          default:
-            console.log('📨 Unknown message type:', type);
-            break;
-        }
-      };
-
-      window.addEventListener('message', handleMessage);
-      
-      // Send initial token to iframe
-      setTimeout(() => {
-        if (iframeRef.current && iframeRef.current.contentWindow) {
-          console.log('📤 Sending token to iframe');
-          iframeRef.current.contentWindow.postMessage({
-            type: 'INIT',
-            token: token
-          }, 'http://localhost:3002');
-        }
-      }, 500);
-
-      return () => {
-        window.removeEventListener('message', handleMessage);
-      };
-    } catch (error) {
-      console.error('Error setting up iframe communication:', error);
-    }
-  }, [token]);
 
   return (
-    <>
-      {/* NEW: CSS Animations */}
-      <style jsx>{`
-        @keyframes mapWidgetEntrance {
-          0% {
-            transform: scale(0.3) translateY(-50px) rotate(-5deg);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.05) translateY(-10px) rotate(-1deg);
-            opacity: 0.8;
-          }
-          100% {
-            transform: scale(1) translateY(0) rotate(0deg);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes statusPulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-        
-        .map-widget-entrance {
-          animation: mapWidgetEntrance 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        .status-indicator {
-          animation: statusPulse 2s ease-in-out infinite;
-        }
-      `}</style>
-
-      <div
-        ref={dragRef}
-        className={`fixed z-50 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 ${isAnimating ? 'map-widget-entrance' : ''}`}
-        style={{
-          left: `${position.x}px`,
-          top: `${position.y}px`,
-          width: widgetSize.width,
-          height: widgetSize.height,
-          transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          cursor: isDragging ? 'grabbing' : 'auto',
-          transform: `scale(${isDragging ? 1.02 : 1})`,
-          filter: `drop-shadow(0 ${isDragging ? 25 : 20}px ${isDragging ? 50 : 40}px rgba(0,0,0,${isDragging ? 0.25 : 0.15}))`
-        }}
-        onMouseDown={handleMouseDown}
-      >
-        {/* Your existing header - enhanced with status indicator */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 flex items-center justify-between map-controls relative overflow-hidden">
-          {/* NEW: Animated background pattern */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
-          </div>
-          
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="relative">
-              <MapPin className="w-5 h-5 text-white" />
-              {isConnected && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full status-indicator"></div>
-              )}
+    <div
+      ref={dragRef}
+      className="fixed z-50 bg-white rounded-2xl shadow-2xl overflow-hidden"
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        width: widgetSize.width,
+        height: widgetSize.height,
+        transition: isDragging ? 'none' : 'all 0.3s ease',
+        cursor: isDragging ? 'grabbing' : 'default'
+      }}
+      onMouseDown={handleMouseDown}
+    >
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="text-xl">🗺️</div>
+          <h3 className="font-semibold">Caffis Map</h3>
+          {isConnected && (
+            <div className="flex items-center space-x-1 text-xs bg-white/20 rounded-full px-2 py-1">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>{nearbyUsers} nelle vicinanze</span>
             </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm">Caffis Map</h3>
-              {!isMinimized && (
-                <p className="text-white/80 text-xs">
-                  {mapLoading ? 'Connessione...' : 
-                   mapError ? 'Offline' :
-                   `${nearbyUsers} amanti del caffè nelle vicinanze`}
-                </p>
-              )}
+          )}
+          {!isConnected && !mapLoading && (
+            <div className="flex items-center space-x-1 text-xs bg-red-500/20 rounded-full px-2 py-1">
+              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+              <span>Disconnesso</span>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 relative z-10 map-controls">
-            {!isMinimized && isConnected && (
-              <button
-                onClick={() => console.log('Settings')}
-                className="p-1.5 hover:bg-white/20 rounded-lg transition-all duration-200 transform hover:scale-110"
-                title="Impostazioni Mappa"
-              >
-                <Settings className="w-4 h-4 text-white" />
-              </button>
-            )}
-            
-            <button
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="p-1.5 hover:bg-white/20 rounded-lg transition-all duration-200 transform hover:scale-110"
-              title={isMinimized ? 'Espandi Mappa' : 'Riduci Mappa'}
-            >
-              <Minimize2 className="w-4 h-4 text-white" />
-            </button>
-            
-            {!isMinimized && (
-              <button
-                onClick={() => setIsMaximized(!isMaximized)}
-                className="p-1.5 hover:bg-white/20 rounded-lg transition-all duration-200 transform hover:scale-110"
-                title={isMaximized ? 'Ripristina' : 'Massimizza'}
-              >
-                <Maximize2 className="w-4 h-4 text-white" />
-              </button>
-            )}
-            
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-red-500/30 rounded-lg transition-all duration-200 transform hover:scale-110"
-              title="Chiudi Mappa"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </div>
+          )}
         </div>
+        
+        <div className="map-controls flex items-center space-x-1">
+          <button 
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="hover:bg-white/20 p-1 rounded transition-colors"
+            title={isMinimized ? "Espandi" : "Minimizza"}
+          >
+            {isMinimized ? '🔼' : '🔽'}
+          </button>
+          <button 
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="hover:bg-white/20 p-1 rounded transition-colors"
+            title={isMaximized ? "Riduci" : "Massimizza"}
+          >
+            {isMaximized ? '📱' : '📺'}
+          </button>
+          <button 
+            onClick={onClose}
+            className="hover:bg-white/20 p-1 rounded transition-colors"
+            title="Chiudi"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
 
-        {/* Enhanced Map Content */}
-        {!isMinimized && (
-          <div className="relative w-full h-full bg-gray-50">
-            {/* NEW: Loading State */}
-            {mapLoading && <MapLoadingState />}
-            
-            {/* NEW: Error State */}
-            {mapError && <MapErrorState />}
-
-            {/* Your existing iframe - enhanced */}
-            {!mapLoading && !mapError && (
-              <>
-                <iframe
-                  ref={iframeRef}
-                  src={`http://localhost:3002?token=${token}&embed=true&hideControls=true&theme=modern`}
-                  className="w-full h-full border-0 transition-opacity duration-300"
-                  title="Caffis Interactive Map"
-                  allow="geolocation"
-                  sandbox="allow-scripts allow-same-origin allow-forms"
-                  style={{ 
-                    height: 'calc(100% - 50px)',
-                    opacity: isConnected ? 1 : 0.5,
-                    background: 'transparent'
-                  }}
-                  onLoad={() => {
-                    console.log('Map microservice loaded successfully');
-                    // Enhanced connection detection
-                    setTimeout(() => {
-                      if (iframeRef.current) {
-                        setIsConnected(true);
-                        setMapLoading(false);
-                        // Try to get real data from iframe
-                        tryGetDataFromIframe();
-                      }
-                    }, 1000);
-                  }}
-                  onError={() => {
-                    console.error('Map microservice failed to load');
-                    setMapError('Microservice connection failed');
-                    setMapLoading(false);
-                  }}
-                />
-                
-                {/* NEW: Beautiful Status Bar */}
-                <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-4 py-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <Users className="w-4 h-4 text-blue-500" />
-                        <span className="text-gray-700 font-medium">{nearbyUsers}</span>
-                        <span className="text-gray-500">nelle vicinanze</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Coffee className="w-4 h-4 text-amber-500" />
-                        <span className="text-gray-700 font-medium">5</span>
-                        <span className="text-gray-500">caffè</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-gray-500 font-medium">Live</span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+      {/* Content */}
+      <div className="relative h-full">
+        {mapLoading && <MapLoadingState />}
+        {mapError && !mapLoading && <MapErrorState />}
+        
+        {!isMinimized && !mapError && (
+          <iframe
+            ref={iframeRef}
+            src={`${MAP_WIDGET_URL}?token=${encodeURIComponent(token)}&embed=true&theme=light`}
+            className="w-full h-full border-0"
+            style={{ height: 'calc(100% - 60px)' }}
+            onLoad={() => {
+              console.log('✅ Map widget iframe loaded successfully from:', MAP_WIDGET_URL);
+              setMapLoading(false);
+            }}
+            onError={(e) => {
+              console.error('❌ Map widget iframe load error:', e);
+              setMapError('Failed to load map widget iframe');
+              setMapLoading(false);
+            }}
+            title="Caffis Map Widget"
+            allow="geolocation"
+          />
+        )}
+        
+        {isMinimized && (
+          <div className="p-4 text-center text-gray-600">
+            <small>Mappa minimizzata - clicca 🔼 per espandere</small>
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 
