@@ -1,78 +1,88 @@
-// server/prisma/schema.prisma - CORRECTED for Alpine Linux
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider      = "prisma-client-js"
-  // FIXED: Use linux-musl for Alpine Linux containers
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
-}
-
 model User {
-  id                String             @id @default(uuid())
-  firstName         String
-  lastName          String
-  username          String?            @unique
-  email             String?            @unique
-  phoneNumber       String?            @unique
-  password          String
-  bio               String?
-  profilePic        String?
-
-  // Verification fields
-  isEmailVerified   Boolean            @default(false)
-  isPhoneVerified   Boolean            @default(false)
-
-  // Onboarding preferences (UPDATED with standardized fields)
-  onboardingCompleted Boolean          @default(false)
-  ageRange            String?          // "18-24", "25-34", etc.
-  coffeePersonality   String?          // "quick", "balanced", "slow"
-  socialEnergy        String?          // "introvert", "ambivert", "extrovert"
-  conversationTopics  String?          // "work", "hobbies", "life_stories", etc.
-  groupPreference     String?          // "one_on_one", "small_group", "larger_group"
-  locationPreference  String?          // "quiet", "lively", "outdoor", "coworking"
-  timePreference      String?          // "spontaneous", "flexible", "planned"
-  socialGoals         String?          // "friendship", "networking", "fun", "learning"
-  meetingFrequency    String?          // "daily", "weekly", "biweekly", "monthly"
-
-  // Relations
-  invites           Invite[]           @relation("HostInvites")
-  requests          Request[]
-  verificationCodes VerificationCode[]
-  preferences       UserPreferences[]  // NEW relation
-
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  id                  String             @id @default(uuid())
+  firstName           String
+  lastName            String
+  email               String?            @unique
+  password            String
+  bio                 String?
+  profilePic          String?
+  createdAt           DateTime           @default(now())
+  username            String?            @unique
+  isEmailVerified     Boolean            @default(false)
+  isPhoneVerified     Boolean            @default(false)
+  phoneNumber         String?            @unique
+  updatedAt           DateTime           @updatedAt
+  coffeePersonality   String?
+  conversationTopics  String?
+  groupPreference     String?
+  locationPreference  String?
+  meetingFrequency    String?
+  onboardingCompleted Boolean            @default(false)
+  socialGoals         String?
+  timePreference      String?
+  ageRange            String?
+  socialEnergy        String?
+  invites             Invite[]           @relation("HostInvites")
+  requests            Request[]
+  preferences         UserPreferences[]
+  verificationCodes   VerificationCode[]
 }
 
-// NEW: Separate table for detailed preferences analytics
 model UserPreferences {
-  id            String   @id @default(uuid())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String
-  preferences   Json     // Store all preferences as JSON for flexibility
-  completedAt   DateTime @default(now())
-  version       Int      @default(1) // For tracking preference updates
-}
-
-// NEW: Table to store verification codes (OTP)
-model VerificationCode {
-  id          String                 @id @default(uuid())
-  code        String                 // The 6-digit code
-  type        VerificationCodeType   // EMAIL or SMS
-  purpose     VerificationPurpose    // REGISTRATION, LOGIN, etc.
-  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
   userId      String
-  expiresAt   DateTime               // Code expires after X minutes
-  verified    Boolean                @default(false)
-  attempts    Int                    @default(0)  // Track failed attempts
-  createdAt   DateTime               @default(now())
+  preferences Json
+  completedAt DateTime @default(now())
+  version     Int      @default(1)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// NEW: Enums for verification system
+model VerificationCode {
+  id        String               @id @default(uuid())
+  code      String
+  type      VerificationCodeType
+  purpose   VerificationPurpose
+  userId    String
+  expiresAt DateTime
+  verified  Boolean              @default(false)
+  attempts  Int                  @default(0)
+  createdAt DateTime             @default(now())
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Invite {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  time        DateTime
+  location    String
+  open        Boolean
+  hostId      String
+  createdAt   DateTime  @default(now())
+  host        User      @relation("HostInvites", fields: [hostId], references: [id])
+  requests    Request[]
+}
+
+model Request {
+  id        String   @id @default(uuid())
+  status    String
+  userId    String
+  inviteId  String
+  createdAt DateTime @default(now())
+  invite    Invite   @relation(fields: [inviteId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
 enum VerificationCodeType {
   EMAIL
   SMS
@@ -82,28 +92,4 @@ enum VerificationPurpose {
   REGISTRATION
   LOGIN
   PASSWORD_RESET
-}
-
-// Existing models (unchanged)
-model Invite {
-  id          String    @id @default(uuid())
-  title       String
-  description String
-  time        DateTime
-  location    String
-  open        Boolean
-  host        User      @relation("HostInvites", fields: [hostId], references: [id])
-  hostId      String
-  requests    Request[]
-  createdAt   DateTime  @default(now())
-}
-
-model Request {
-  id        String   @id @default(uuid())
-  status    String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  invite    Invite   @relation(fields: [inviteId], references: [id])
-  inviteId  String
-  createdAt DateTime @default(now())
 }

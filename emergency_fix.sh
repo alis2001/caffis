@@ -1,3 +1,17 @@
+#!/bin/bash
+
+# EMERGENCY COMPLETE FIX - Restore your full backend system
+set -e
+
+echo "🚨 EMERGENCY FIX: Restoring your complete backend system..."
+
+# 1. Stop all services
+echo "Stopping services..."
+docker-compose down
+
+# 2. Copy your COMPLETE app.js from project knowledge
+echo "Restoring your complete app.js..."
+cat > server/app.js << 'EOF'
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -158,3 +172,101 @@ app.listen(port, '0.0.0.0', async () => {
 });
 
 module.exports = app;
+EOF
+
+# 3. Create missing errorHandler if it doesn't exist
+if [ ! -f "server/middleware/errorHandler.js" ]; then
+    echo "Creating missing errorHandler.js..."
+    mkdir -p server/middleware
+    cat > server/middleware/errorHandler.js << 'EOF'
+module.exports = (err, req, res, next) => {
+  console.error('🔥 Error Handler:', err);
+  
+  // Handle Prisma errors
+  if (err.code === 'P2002') {
+    return res.status(400).json({
+      error: 'UNIQUE_CONSTRAINT_VIOLATION',
+      message: 'This data already exists',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Handle validation errors
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      error: 'VALIDATION_ERROR',
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Default error
+  res.status(err.status || 500).json({
+    error: 'INTERNAL_SERVER_ERROR',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
+    timestamp: new Date().toISOString()
+  });
+};
+EOF
+fi
+
+# 4. Check if Prisma schema exists and migrate if needed
+if [ -f "server/prisma/schema.prisma" ]; then
+    echo "Prisma schema found, attempting migration..."
+else
+    echo "❌ Prisma schema missing - this will cause issues"
+fi
+
+# 5. Rebuild backend container
+echo "Rebuilding backend container..."
+docker-compose build --no-cache backend
+
+# 6. Start services in order
+echo "Starting services..."
+docker-compose up -d db
+sleep 10
+
+echo "Starting backend..."
+docker-compose up -d backend
+sleep 20
+
+echo "Starting other services..."
+docker-compose up -d frontend map-redis map-backend map-frontend
+
+# 7. Test endpoints
+echo ""
+echo "🧪 Testing endpoints..."
+sleep 15
+
+echo "Testing health endpoint..."
+if curl -f http://localhost:5000/health 2>/dev/null; then
+    echo "✅ Health endpoint OK"
+else
+    echo "❌ Health endpoint failed"
+fi
+
+echo ""
+echo "Testing auth endpoints..."
+echo "Register test:"
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"firstName":"Test","lastName":"User","username":"testuser","email":"test@example.com","password":"TestPass123"}' \
+     http://localhost:5000/api/auth/register 2>/dev/null | head -c 200
+echo ""
+
+echo "Login test:"
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"emailOrUsername":"test@example.com","password":"TestPass123"}' \
+     http://localhost:5000/api/auth/login 2>/dev/null | head -c 200
+echo ""
+
+echo ""
+echo "📋 Check backend logs:"
+echo "docker-compose logs -f backend"
+echo ""
+echo "🌐 Available endpoints:"
+echo "• Health: http://localhost:5000/health"
+echo "• Register: POST http://localhost:5000/api/auth/register"
+echo "• Login: POST http://localhost:5000/api/auth/login"
+echo "• Verify: POST http://localhost:5000/api/auth/verify"
+echo ""
+echo "🎉 EMERGENCY FIX COMPLETED!"

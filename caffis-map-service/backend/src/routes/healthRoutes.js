@@ -4,129 +4,137 @@ const router = express.Router();
 const redisService = require('../services/redisService');
 const logger = require('../utils/logger');
 
-// ============================================
-// BASIC HEALTH CHECK
-// ============================================
-router.get('/', (req, res) => {
-  res.json({
-    status: 'OK',
-    service: 'caffis-map-service',
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// ============================================
-// DETAILED HEALTH CHECK
-// ============================================
-router.get('/detailed', async (req, res) => {
+// Health check endpoint
+router.get('/', async (req, res) => {
   try {
-    const healthCheck = {
-      status: 'OK',
-      service: 'caffis-map-service',
+    const health = {
+      status: 'healthy',
       timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
+      service: 'caffis-map-service',
+      version: '1.0.0',
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      checks: {
-        redis: 'checking...',
-        database: 'not_applicable',
-        external_apis: 'checking...'
+      services: {
+        server: 'running'
       }
     };
 
     // Check Redis connection
     try {
-      if (redisService.isConnected) {
-        await redisService.client.ping();
-        healthCheck.checks.redis = 'OK';
-      } else {
-        healthCheck.checks.redis = 'DISCONNECTED';
-        healthCheck.status = 'DEGRADED';
-      }
-    } catch (error) {
-      healthCheck.checks.redis = 'ERROR';
-      healthCheck.status = 'UNHEALTHY';
-      logger.error('Redis health check failed:', error);
+      await redisService.ping();
+      health.services.redis = 'connected';
+    } catch (redisError) {
+      logger.warn('Redis health check failed:', redisError.message);
+      health.services.redis = 'disconnected';
+      health.status = 'degraded';
     }
 
-    // Check external APIs (mock for now)
-    try {
-      // In future, check Mapbox API, main app API, etc.
-      healthCheck.checks.external_apis = 'OK';
-    } catch (error) {
-      healthCheck.checks.external_apis = 'ERROR';
-      healthCheck.status = 'DEGRADED';
+    // Check environment variables
+    const requiredEnvVars = ['JWT_SECRET', 'REDIS_HOST', 'PORT'];
+    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    
+    if (missingEnvVars.length > 0) {
+      health.services.config = `missing: ${missingEnvVars.join(', ')}`;
+      health.status = 'degraded';
+    } else {
+      health.services.config = 'valid';
     }
 
-    const statusCode = healthCheck.status === 'OK' ? 200 : 
-                      healthCheck.status === 'DEGRADED' ? 200 : 503;
+    const statusCode = health.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json(health);
 
-    res.status(statusCode).json(healthCheck);
   } catch (error) {
-    logger.error('Health check error:', error);
+    logger.error('Health check failed:', error);
     res.status(503).json({
-      status: 'UNHEALTHY',
-      service: 'caffis-map-service',
+      status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: 'Health check failed'
+      error: error.message,
+      service: 'caffis-map-service'
     });
   }
 });
 
-// ============================================
-// REDIS STATUS
-// ============================================
-router.get('/redis', async (req, res) => {
+// Detailed health check
+router.get('/detailed', async (req, res) => {
   try {
-    if (!redisService.isConnected) {
-      return res.status(503).json({
-        status: 'DISCONNECTED',
-        message: 'Redis client is not connected'
-      });
+    const detailed = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      service: 'caffis-map-service',
+      version: '1.0.0',
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      cpu: process.cpuUsage(),
+      environment: process.env.NODE_ENV,
+      platform: process.platform,
+      nodeVersion: process.version,
+      services: {
+        server: 'running'
+      },
+      endpoints: {
+        health: '/health',
+        mapRoutes: '/api/map/*',
+        socketIO: 'ws://localhost:' + (process.env.PORT || 5001)
+      }
+    };
+
+    // Redis detailed check
+    try {
+      const redisInfo = await redisService.getInfo();
+      detailed.services.redis = {
+        status: 'connected',
+        info: redisInfo
+      };
+    } catch (redisError) {
+      detailed.services.redis = {
+        status: 'disconnected',
+        error: redisError.message
+      };
+      detailed.status = 'degraded';
     }
 
-    const ping = await redisService.client.ping();
-    const info = await redisService.client.info('memory');
-    
-    res.json({
-      status: 'OK',
-      ping: ping,
-      connection: 'active',
-      memory_info: info.split('\r\n').filter(line => 
-        line.includes('used_memory') || line.includes('used_memory_human')
-      )
-    });
+    const statusCode = detailed.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json(detailed);
+
   } catch (error) {
-    logger.error('Redis status check failed:', error);
+    logger.error('Detailed health check failed:', error);
     res.status(503).json({
-      status: 'ERROR',
-      error: error.message
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      service: 'caffis-map-service'
     });
   }
 });
 
-// ============================================
-// MAP SERVICE STATISTICS
-// ============================================
-router.get('/stats', async (req, res) => {
+// Ready check (for Kubernetes)
+router.get('/ready', async (req, res) => {
   try {
-    const stats = await redisService.getMapStatistics();
+    // Check if all critical services are ready
+    await redisService.ping();
     
-    res.json({
-      status: 'OK',
-      statistics: stats,
-      timestamp: new Date().toISOString()
+    res.status(200).json({
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+      service: 'caffis-map-service'
     });
   } catch (error) {
-    logger.error('Stats check failed:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      error: 'Failed to retrieve statistics'
+    res.status(503).json({
+      status: 'not ready',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      service: 'caffis-map-service'
     });
   }
+});
+
+// Live check (for Kubernetes)
+router.get('/live', (req, res) => {
+  res.status(200).json({
+    status: 'alive',
+    timestamp: new Date().toISOString(),
+    service: 'caffis-map-service'
+  });
 });
 
 module.exports = router;
