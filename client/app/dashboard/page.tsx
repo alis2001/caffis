@@ -118,9 +118,9 @@ const MapWidget = ({ token, onClose }) => {
   const dragStartPos = useRef({ x: 0, y: 0 });
   const iframeRef = useRef(null);
 
-  // CORRECTED: Use the proper URLs from your docker-compose setup
+  // FIXED: Correct URLs for map service
   const MAP_BACKEND_URL = process.env.NEXT_PUBLIC_MAP_SERVICE_URL || 'http://localhost:5001';
-  const MAP_WIDGET_URL = process.env.NEXT_PUBLIC_MAP_WIDGET_URL || 'http://localhost:3002';
+  const MAP_WIDGET_URL = process.env.NEXT_PUBLIC_MAP_WIDGET_URL || 'http://localhost:3001';
 
   useEffect(() => {
     // Test connection to map service backend first
