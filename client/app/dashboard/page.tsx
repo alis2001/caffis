@@ -99,28 +99,53 @@ const QuickAction = ({ title, icon, variant, onClick }) => {
   );
 };
 
-// Map Widget Component that integrates with the microservice
-// Enhanced Map Widget Component - keeps your exact styling but adds UX improvements
-// client/app/dashboard/page.tsx - CORRECTED MapWidget Component
-// Replace your existing MapWidget with this version
+// Enhanced MapWidget Component - Apple WWDC 2025 Design
+// Replace your existing MapWidget component with this version
 
 const MapWidget = ({ token, onClose }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [position, setPosition] = useState({ x: window.innerWidth - 450, y: 100 });
+  const [position, setPosition] = useState({ x: 50, y: 50 }); // Start more centered
+  const [size, setSize] = useState({ width: 1200, height: 800 }); // Much larger default
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const [mapLoading, setMapLoading] = useState(true);
   const [mapError, setMapError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [nearbyUsers, setNearbyUsers] = useState(0);
   
   const dragRef = useRef(null);
+  const resizeRef = useRef(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
+  const resizeStartPos = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const iframeRef = useRef(null);
 
   // FIXED: Correct URLs for map service
   const MAP_BACKEND_URL = process.env.NEXT_PUBLIC_MAP_SERVICE_URL || 'http://localhost:5001';
-  const MAP_WIDGET_URL = process.env.NEXT_PUBLIC_MAP_WIDGET_URL || 'http://localhost:3001';
+  const MAP_WIDGET_URL = process.env.NEXT_PUBLIC_MAP_WIDGET_URL || 'http://localhost:3002';
+
+  // Initialize widget size based on screen
+  useEffect(() => {
+    const updateSize = () => {
+      const maxWidth = window.innerWidth - 100;
+      const maxHeight = window.innerHeight - 100;
+      
+      setSize({
+        width: Math.min(1200, maxWidth),
+        height: Math.min(800, maxHeight)
+      });
+      
+      // Center the widget
+      setPosition({
+        x: Math.max(50, (window.innerWidth - Math.min(1200, maxWidth)) / 2),
+        y: Math.max(50, (window.innerHeight - Math.min(800, maxHeight)) / 2)
+      });
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   useEffect(() => {
     // Test connection to map service backend first
@@ -165,9 +190,9 @@ const MapWidget = ({ token, onClose }) => {
     testConnection();
   }, [MAP_BACKEND_URL, MAP_WIDGET_URL]);
 
-  // Drag functionality (your existing code)
+  // Enhanced drag functionality
   const handleMouseDown = (e) => {
-    if (!e.target.closest('.map-controls') && !e.target.closest('.bg-gradient-to-r')) return;
+    if (e.target.closest('.resize-handle') || e.target.closest('.map-content')) return;
     setIsDragging(true);
     dragStartPos.current = {
       x: e.clientX - position.x,
@@ -177,24 +202,55 @@ const MapWidget = ({ token, onClose }) => {
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    const newX = Math.max(0, Math.min(
-      window.innerWidth - (isMaximized ? window.innerWidth * 0.9 : 450),
-      e.clientX - dragStartPos.current.x
-    ));
-    const newY = Math.max(0, Math.min(
-      window.innerHeight - (isMaximized ? window.innerHeight * 0.9 : 600),
-      e.clientY - dragStartPos.current.y
-    ));
-    setPosition({ x: newX, y: newY });
+    if (isDragging) {
+      const newX = Math.max(0, Math.min(
+        window.innerWidth - size.width,
+        e.clientX - dragStartPos.current.x
+      ));
+      const newY = Math.max(0, Math.min(
+        window.innerHeight - size.height,
+        e.clientY - dragStartPos.current.y
+      ));
+      setPosition({ x: newX, y: newY });
+    }
+    
+    if (isResizing) {
+      const deltaX = e.clientX - resizeStartPos.current.x;
+      const deltaY = e.clientY - resizeStartPos.current.y;
+      
+      const newWidth = Math.max(400, Math.min(
+        window.innerWidth - position.x - 20,
+        resizeStartPos.current.width + deltaX
+      ));
+      const newHeight = Math.max(300, Math.min(
+        window.innerHeight - position.y - 20,
+        resizeStartPos.current.height + deltaY
+      ));
+      
+      setSize({ width: newWidth, height: newHeight });
+    }
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    setIsResizing(false);
+  };
+
+  // Resize functionality
+  const handleResizeStart = (e) => {
+    setIsResizing(true);
+    resizeStartPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height
+    };
+    e.stopPropagation();
+    e.preventDefault();
   };
 
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -202,13 +258,28 @@ const MapWidget = ({ token, onClose }) => {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging]);
+  }, [isDragging, isResizing, position, size]);
 
-  const widgetSize = isMaximized 
-    ? { width: '90vw', height: '90vh' } 
-    : isMinimized 
-    ? { width: '320px', height: '60px' }
-    : { width: '450px', height: '600px' };
+  // Window controls
+  const handleMinimize = () => {
+    setIsMinimized(!isMinimized);
+  };
+
+  const handleMaximize = () => {
+    if (isMaximized) {
+      // Restore to previous size
+      setSize({ width: 1200, height: 800 });
+      setPosition({ x: 50, y: 50 });
+    } else {
+      // Maximize
+      setSize({ 
+        width: window.innerWidth - 40, 
+        height: window.innerHeight - 40 
+      });
+      setPosition({ x: 20, y: 20 });
+    }
+    setIsMaximized(!isMaximized);
+  };
 
   const handleRetry = () => {
     setMapError(null);
@@ -230,26 +301,32 @@ const MapWidget = ({ token, onClose }) => {
 
   // Enhanced Loading State Component
   const MapLoadingState = () => (
-    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center z-10">
-      <div className="text-center">
-        <div className="relative mb-6">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
-          <div className="absolute inset-0 w-12 h-12 border-4 border-blue-200 rounded-full mx-auto animate-ping"></div>
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/90 to-purple-50/90 backdrop-blur-sm flex items-center justify-center z-10 rounded-b-3xl">
+      <div className="text-center p-8">
+        <div className="relative mb-8">
+          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+          <div className="absolute inset-0 w-16 h-16 border-4 border-purple-200 border-t-purple-500 rounded-full mx-auto animate-spin animate-reverse"></div>
         </div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Connessione a Caffis Map
+        <h3 className="text-2xl font-bold text-gray-800 mb-3">
+          Connessione a Caffis Map ☕
         </h3>
-        <p className="text-sm text-gray-600 mb-2">
+        <p className="text-lg text-gray-600 mb-4">
           Caricamento mappa interattiva...
         </p>
-        <div className="text-xs text-gray-500 space-y-1">
-          <div>Backend: {MAP_BACKEND_URL}</div>
-          <div>Widget: {MAP_WIDGET_URL}</div>
+        <div className="text-sm text-gray-500 space-y-2 bg-white/50 backdrop-blur-md rounded-2xl p-4">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Backend: {MAP_BACKEND_URL}</span>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <span>Widget: {MAP_WIDGET_URL}</span>
+          </div>
         </div>
-        <div className="flex items-center justify-center space-x-1 mt-4">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-75"></div>
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-150"></div>
+        <div className="flex items-center justify-center space-x-2 mt-6">
+          <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-bounce"></div>
+          <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-bounce delay-75"></div>
+          <div className="w-3 h-3 bg-gradient-to-r from-pink-500 to-red-500 rounded-full animate-bounce delay-150"></div>
         </div>
       </div>
     </div>
@@ -257,121 +334,185 @@ const MapWidget = ({ token, onClose }) => {
 
   // Enhanced Error State Component
   const MapErrorState = () => (
-    <div className="absolute inset-0 bg-red-50 flex items-center justify-center z-10">
-      <div className="text-center p-6">
-        <div className="text-4xl mb-4">⚠️</div>
-        <h3 className="text-lg font-semibold text-red-800 mb-2">
+    <div className="absolute inset-0 bg-gradient-to-br from-red-50/90 to-orange-50/90 backdrop-blur-sm flex items-center justify-center z-10 rounded-b-3xl">
+      <div className="text-center p-8 max-w-md">
+        <div className="text-6xl mb-6 animate-bounce">⚠️</div>
+        <h3 className="text-2xl font-bold text-red-800 mb-4">
           Servizio Mappa Non Disponibile
         </h3>
-        <p className="text-sm text-red-600 mb-4 max-w-sm">
+        <p className="text-red-600 mb-6 leading-relaxed">
           {mapError || 'Il microservizio mappa non è raggiungibile'}
         </p>
-        <div className="text-xs text-gray-600 mb-4 space-y-1">
-          <div>Verificare che i servizi siano attivi:</div>
-          <div className="font-mono bg-gray-100 p-2 rounded text-left">
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl p-4 mb-6 text-left">
+          <div className="text-sm text-gray-700 mb-3">
+            <strong>Verificare che i servizi siano attivi:</strong>
+          </div>
+          <div className="font-mono text-xs bg-gray-800 text-green-400 p-3 rounded-xl">
             docker-compose up map-backend map-frontend
           </div>
         </div>
         <button 
           onClick={handleRetry}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+          className="btn-apple-base btn-primary px-6 py-3 text-lg font-semibold"
         >
-          Riprova Connessione
+          🔄 Riprova Connessione
         </button>
       </div>
     </div>
   );
 
-  return (
-    <div
-      ref={dragRef}
-      className="fixed z-50 bg-white rounded-2xl shadow-2xl overflow-hidden"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        width: widgetSize.width,
-        height: widgetSize.height,
-        transition: isDragging ? 'none' : 'all 0.3s ease',
-        cursor: isDragging ? 'grabbing' : 'default'
-      }}
-      onMouseDown={handleMouseDown}
-    >
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="text-xl">🗺️</div>
-          <h3 className="font-semibold">Caffis Map</h3>
-          {isConnected && (
-            <div className="flex items-center space-x-1 text-xs bg-white/20 rounded-full px-2 py-1">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>{nearbyUsers} nelle vicinanze</span>
-            </div>
-          )}
-          {!isConnected && !mapLoading && (
-            <div className="flex items-center space-x-1 text-xs bg-red-500/20 rounded-full px-2 py-1">
-              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-              <span>Disconnesso</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="map-controls flex items-center space-x-1">
-          <button 
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="hover:bg-white/20 p-1 rounded transition-colors"
-            title={isMinimized ? "Espandi" : "Minimizza"}
-          >
-            {isMinimized ? '🔼' : '🔽'}
-          </button>
-          <button 
-            onClick={() => setIsMaximized(!isMaximized)}
-            className="hover:bg-white/20 p-1 rounded transition-colors"
-            title={isMaximized ? "Riduci" : "Massimizza"}
-          >
-            {isMaximized ? '📱' : '📺'}
-          </button>
-          <button 
-            onClick={onClose}
-            className="hover:bg-white/20 p-1 rounded transition-colors"
-            title="Chiudi"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
+  const widgetStyle = {
+    position: 'fixed',
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+    width: isMinimized ? '400px' : `${size.width}px`,
+    height: isMinimized ? '55px' : `${size.height}px`,
+    transition: (isDragging || isResizing) ? 'none' : 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    cursor: isDragging ? 'grabbing' : 'default',
+    zIndex: 1000
+  };
 
-      {/* Content */}
-      <div className="relative h-full">
-        {mapLoading && <MapLoadingState />}
-        {mapError && !mapLoading && <MapErrorState />}
-        
-        {!isMinimized && !mapError && (
-          <iframe
-            ref={iframeRef}
-            src={`${MAP_WIDGET_URL}?token=${encodeURIComponent(token)}&embed=true&theme=light`}
-            className="w-full h-full border-0"
-            style={{ height: 'calc(100% - 60px)' }}
-            onLoad={() => {
-              console.log('✅ Map widget iframe loaded successfully from:', MAP_WIDGET_URL);
-              setMapLoading(false);
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+        onClick={onClose}
+      />
+      
+      {/* Map Widget */}
+      <div
+        ref={dragRef}
+        className="fixed bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/30 z-50"
+        style={widgetStyle}
+        onMouseDown={handleMouseDown}
+      >
+        {/* Enhanced Sleek Header - Events Gradient Style */}
+        <div className="bg-gradient-to-r from-pink-400 to-red-500 text-white px-6 py-3 flex items-center justify-between cursor-grab active:cursor-grabbing shadow-lg">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30">
+              <span className="text-lg">🗺️</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-base">Caffis Map</h3>
+              {isConnected && (
+                <div className="flex items-center space-x-2 text-xs opacity-90">
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                  <span>{nearbyUsers} nelle vicinanze</span>
+                  <span className="w-1 h-1 bg-white/50 rounded-full"></span>
+                  <span>Live</span>
+                </div>
+              )}
+              {!isConnected && !mapLoading && (
+                <div className="flex items-center space-x-2 text-xs opacity-90">
+                  <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                  <span>Disconnesso</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Sleek Window Controls */}
+          <div className="flex items-center space-x-1.5">
+            <button 
+              onClick={handleMinimize}
+              className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-200 hover:scale-105 group"
+              title={isMinimized ? "Espandi" : "Minimizza"}
+            >
+              <Minimize2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+            </button>
+            <button 
+              onClick={handleMaximize}
+              className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-200 hover:scale-105 group"
+              title={isMaximized ? "Riduci" : "Massimizza"}
+            >
+              <Maximize2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+            </button>
+            <button 
+              onClick={onClose}
+              className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-200 hover:scale-105 group"
+              title="Chiudi"
+            >
+              <X className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="relative h-full map-content" style={{ height: isMinimized ? '0px' : `${size.height - 55}px` }}>
+          {mapLoading && <MapLoadingState />}
+          {mapError && !mapLoading && <MapErrorState />}
+          
+          {!isMinimized && !mapError && (
+            <iframe
+              ref={iframeRef}
+              src={`${MAP_WIDGET_URL}?token=${encodeURIComponent(token)}&embed=true&theme=light`}
+              className="w-full h-full border-0 bg-transparent"
+              onLoad={() => {
+                console.log('✅ Map widget iframe loaded successfully from:', MAP_WIDGET_URL);
+                setMapLoading(false);
+              }}
+              onError={(e) => {
+                console.error('❌ Map widget iframe load error:', e);
+                setMapError('Failed to load map widget iframe');
+                setMapLoading(false);
+              }}
+              title="Caffis Interactive Map"
+              allow="geolocation"
+              style={{
+                borderRadius: '0 0 24px 24px',
+                background: 'transparent'
+              }}
+            />
+          )}
+          
+          {isMinimized && (
+            <div className="px-4 py-2 text-center text-gray-600 bg-gradient-to-r from-gray-50 to-blue-50 rounded-b-3xl">
+              <p className="text-xs font-medium">Mappa minimizzata • Clicca per espandere</p>
+            </div>
+          )}
+        </div>
+
+        {/* Resize Handle */}
+        {!isMinimized && !isMaximized && (
+          <div
+            className="resize-handle absolute bottom-0 right-0 w-6 h-6 cursor-se-resize opacity-50 hover:opacity-100 transition-opacity"
+            onMouseDown={handleResizeStart}
+            style={{
+              background: 'linear-gradient(-45deg, transparent 30%, #8B5CF6 31%, #8B5CF6 33%, transparent 34%, transparent 45%, #8B5CF6 46%, #8B5CF6 48%, transparent 49%)',
+              borderRadius: '0 0 24px 0'
             }}
-            onError={(e) => {
-              console.error('❌ Map widget iframe load error:', e);
-              setMapError('Failed to load map widget iframe');
-              setMapLoading(false);
-            }}
-            title="Caffis Map Widget"
-            allow="geolocation"
           />
         )}
-        
-        {isMinimized && (
-          <div className="p-4 text-center text-gray-600">
-            <small>Mappa minimizzata - clicca 🔼 per espandere</small>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Additional CSS Styles */}
+      <style jsx>{`
+        .resize-handle:hover {
+          background: linear-gradient(-45deg, transparent 30%, #7C3AED 31%, #7C3AED 33%, transparent 34%, transparent 45%, #7C3AED 46%, #7C3AED 48%, transparent 49%);
+        }
+        
+        @keyframes reverse {
+          from { transform: rotate(360deg); }
+          to { transform: rotate(0deg); }
+        }
+        
+        .animate-reverse {
+          animation-direction: reverse;
+        }
+        
+        .map-content {
+          overflow: hidden;
+        }
+        
+        iframe[title="Caffis Interactive Map"] {
+          border: none !important;
+          outline: none !important;
+          background: transparent !important;
+          border-radius: 0 0 24px 24px !important;
+        }
+      `}</style>
+    </>
   );
 };
 
@@ -638,7 +779,7 @@ export default function Dashboard() {
         }
       `}</style>
 
-      <div className="pt-20 pb-12">
+      <div className="page-content-spacing pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Header Section */}
