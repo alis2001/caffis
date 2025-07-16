@@ -32,10 +32,19 @@ model User {
   timePreference      String?
   ageRange            String?
   socialEnergy        String?
+  
+  // ✅ NEW: Add map service integration fields
+  isLocationSharingEnabled Boolean @default(false)
+  mapServiceUserId    String?  @unique // Reference to map service user
+  lastActiveLocation  Json?    // Store last known location {lat, lng, timestamp}
+  
   invites             Invite[]           @relation("HostInvites")
   requests            Request[]
   preferences         UserPreferences[]
   verificationCodes   VerificationCode[]
+  
+  @@index([isLocationSharingEnabled])
+  @@index([mapServiceUserId])
 }
 
 model UserPreferences {
@@ -68,9 +77,18 @@ model Invite {
   location    String
   open        Boolean
   hostId      String
+  
+  // ✅ NEW: Map service integration
+  isMapMeetup     Boolean @default(false) // True if created via map service
+  mapInviteId     String? @unique // Reference to map service invite
+  suggestedPlaces Json?   // Store suggested places from map service
+  
   createdAt   DateTime  @default(now())
   host        User      @relation("HostInvites", fields: [hostId], references: [id])
   requests    Request[]
+  
+  @@index([isMapMeetup])
+  @@index([mapInviteId])
 }
 
 model Request {
