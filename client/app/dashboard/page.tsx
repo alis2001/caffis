@@ -867,8 +867,14 @@ export default function Dashboard() {
                 icon={<MessageCircle />}
                 variant="chat"
                 onClick={() => {
-                  // Get JWT token from localStorage
-                  const token = localStorage.getItem('authToken');
+                  // Get JWT token from localStorage (use the correct key)
+                  const token = localStorage.getItem('caffis_auth_token') || localStorage.getItem('token');
+                  
+                  if (!token) {
+                    console.error('No authentication token found');
+                    return;
+                  }
+                  
                   // Open chat service in new tab with authentication
                   window.open(
                     `http://localhost:3003?token=${token}`,
@@ -961,8 +967,14 @@ export default function Dashboard() {
               icon={<MessageCircle />}
               variant="chat"
               onClick={() => {
-                // Get JWT token from localStorage
-                const token = localStorage.getItem('authToken');
+                // Get JWT token from localStorage (use the correct key)
+                const token = localStorage.getItem('caffis_auth_token') || localStorage.getItem('token');
+                
+                if (!token) {
+                  console.error('No authentication token found');
+                  return;
+                }
+                
                 // Open chat service in new tab with authentication
                 window.open(
                   `http://localhost:3003?token=${token}`,
