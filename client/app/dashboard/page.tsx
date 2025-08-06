@@ -866,7 +866,16 @@ export default function Dashboard() {
                 title="Messaggi"
                 icon={<MessageCircle />}
                 variant="chat"
-                onClick={() => router.push('/messages')}
+                onClick={() => {
+                  // Get JWT token from localStorage
+                  const token = localStorage.getItem('authToken');
+                  // Open chat service in new tab with authentication
+                  window.open(
+                    `http://localhost:3003?token=${token}`,
+                    'caffis-chat',
+                    'width=1200,height=800,scrollbars=yes,resizable=yes'
+                  );
+                }}
               />
               <QuickAction
                 title="Profilo"
@@ -951,7 +960,16 @@ export default function Dashboard() {
               description="Chiacchiera con i tuoi compagni di caffè e organizza incontri"
               icon={<MessageCircle />}
               variant="chat"
-              onClick={() => router.push('/chat')}
+              onClick={() => {
+                // Get JWT token from localStorage
+                const token = localStorage.getItem('authToken');
+                // Open chat service in new tab with authentication
+                window.open(
+                  `http://localhost:3003?token=${token}`,
+                  'caffis-chat',
+                  'width=1200,height=800,scrollbars=yes,resizable=yes'
+                );
+              }}
               stats={[
                 { value: "7", label: "Chat Attive" },
                 { value: "2", label: "Non Letti" }
